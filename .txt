@@ -1,0 +1,251 @@
+# PHASE 2 – Project Initialization (No Business Logic Yet)
+
+You are a Senior MERN + Android + AI Engineer.
+
+Phase 1 has been completed.
+
+Now begin **Phase 2**.
+
+## Objective
+
+Initialize the complete project using production-level architecture.
+
+Do NOT implement AI logic, Android control, or business features yet.
+
+Focus only on project setup, folder structure, configuration, and development environment.
+
+---
+
+# Tech Stack
+
+Frontend
+
+* React 19
+* Vite
+* Tailwind CSS
+* Redux Toolkit
+* React Router
+* Axios
+* React Hook Form
+* Framer Motion
+* Socket.IO Client
+
+Backend
+
+* Node.js
+* Express.js
+* MongoDB Atlas
+* Mongoose
+* JWT
+* Socket.IO
+* dotenv
+* cors
+* helmet
+* morgan
+* compression
+* cookie-parser
+
+Android
+
+* Kotlin
+* Android Studio
+
+AI
+
+* Google Gemini API (integration later)
+
+Planning
+
+* Antigravity
+
+---
+
+# Project Structure
+
+Create a professional monorepo structure.
+
+```text
+AI-Mobile-Control-Agent/
+
+client/
+server/
+android/
+shared/
+docs/
+
+README.md
+.gitignore
+```
+
+---
+
+# Client Structure
+
+Generate an enterprise-level folder structure.
+
+Example:
+
+* assets
+* components
+* layouts
+* pages
+* hooks
+* context
+* redux
+* routes
+* services
+* socket
+* utils
+* constants
+* styles
+
+Configure:
+
+* Vite
+* Tailwind
+* React Router
+* Redux Toolkit
+* Axios Instance
+* Environment Variables
+* ESLint
+* Prettier
+
+---
+
+# Server Structure
+
+Create a scalable Express architecture.
+
+Example:
+
+* config
+* controllers
+* routes
+* models
+* middleware
+* services
+* socket
+* utils
+* validators
+* constants
+* helpers
+* logs
+
+Configure:
+
+* Express
+* MongoDB Connection
+* JWT Setup
+* Helmet
+* Morgan
+* Compression
+* CORS
+* dotenv
+* Global Error Handler
+* Async Error Wrapper
+
+---
+
+# Android Structure
+
+Create a clean Android Studio project with packages only.
+
+Example:
+
+* ui
+* services
+* accessibility
+* speech
+* tts
+* socket
+* intents
+* repository
+* models
+* utils
+
+Do not implement functionality yet.
+
+---
+
+# Documentation
+
+Create:
+
+* README
+* Installation Guide
+* Environment Variables Guide
+* Folder Explanation
+* Development Guide
+
+---
+
+# Git
+
+Initialize Git.
+
+Recommend branch strategy:
+
+* main
+* develop
+* feature/*
+* bugfix/*
+* release/*
+
+---
+
+# Environment Files
+
+Prepare:
+
+Frontend
+
+.env
+
+Backend
+
+.env
+
+Document every variable that will be required later, including placeholders for:
+
+* MongoDB URI
+* JWT Secret
+* Gemini API Key
+* Socket Port
+* Client URL
+
+Do NOT use real secrets.
+
+---
+
+# Deliverables
+
+Generate:
+
+1. Complete folder tree
+2. Package list
+3. npm installation commands
+4. Configuration files
+5. Environment files
+6. Git setup
+7. README structure
+8. Development standards
+9. Code formatting rules
+10. Folder naming conventions
+11. Import conventions
+12. File naming conventions
+13. Commit message conventions
+
+---
+
+# Rules
+
+* No AI implementation.
+* No authentication logic.
+* No Android functionality.
+* No business logic.
+* No API endpoints.
+* No UI screens.
+
+This phase is only about creating a production-ready foundation for the project.
+
+After completing Phase 2, stop and wait for approval before starting Phase 3.
