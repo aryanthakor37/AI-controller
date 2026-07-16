@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">AI Mobile Control Agent</string>
+    <string name="accessibility_description">Enables AI Assistant to perform screen automations, clicks, and text entries.</string>
+</resources>

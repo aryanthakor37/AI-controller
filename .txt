@@ -1,251 +1,423 @@
-# PHASE 2 – Project Initialization (No Business Logic Yet)
+You are a Senior Android Engineer, Senior UI/UX Designer, and Kotlin Architect.
 
-You are a Senior MERN + Android + AI Engineer.
+Previous phases are completed.
 
-Phase 1 has been completed.
-
-Now begin **Phase 2**.
+Now begin Phase 9.
 
 ## Objective
 
-Initialize the complete project using production-level architecture.
+Transform the Android application into a complete, modern AI assistant application.
 
-Do NOT implement AI logic, Android control, or business features yet.
+The Android app should become the primary interface for users.
 
-Focus only on project setup, folder structure, configuration, and development environment.
+Do NOT implement backend authentication yet.
 
----
+Do NOT implement Accessibility Service.
 
-# Tech Stack
+Do NOT implement Voice Assistant.
 
-Frontend
+Use mock data where backend is not yet connected.
 
-* React 19
-* Vite
-* Tailwind CSS
-* Redux Toolkit
-* React Router
-* Axios
-* React Hook Form
-* Framer Motion
-* Socket.IO Client
+Build a premium Android application inspired by:
 
-Backend
+- ChatGPT
+- Google Gemini
+- Microsoft Copilot
+- Nothing OS
+- Material Design 3
 
-* Node.js
-* Express.js
-* MongoDB Atlas
-* Mongoose
-* JWT
-* Socket.IO
-* dotenv
-* cors
-* helmet
-* morgan
-* compression
-* cookie-parser
+--------------------------------------------------
 
-Android
+Tech Stack
 
-* Kotlin
-* Android Studio
+- Kotlin
+- Jetpack Compose
+- Material Design 3
+- Navigation Compose
+- MVVM
+- StateFlow
+- Hilt
+- Coil
+- Coroutines
 
-AI
+--------------------------------------------------
 
-* Google Gemini API (integration later)
+App Flow
 
-Planning
+Splash Screen
 
-* Antigravity
+↓
 
----
+Onboarding (Optional)
 
-# Project Structure
+↓
 
-Create a professional monorepo structure.
+Login
 
-```text
-AI-Mobile-Control-Agent/
+↓
 
-client/
-server/
-android/
-shared/
-docs/
+Register
 
-README.md
-.gitignore
-```
+↓
 
----
+Forgot Password
 
-# Client Structure
+↓
 
-Generate an enterprise-level folder structure.
+Dashboard
 
-Example:
+↓
 
-* assets
-* components
-* layouts
-* pages
-* hooks
-* context
-* redux
-* routes
-* services
-* socket
-* utils
-* constants
-* styles
+AI Chat
 
-Configure:
+↓
 
-* Vite
-* Tailwind
-* React Router
-* Redux Toolkit
-* Axios Instance
-* Environment Variables
-* ESLint
-* Prettier
+Command History
 
----
+↓
 
-# Server Structure
+Device Status
 
-Create a scalable Express architecture.
+↓
 
-Example:
+Settings
 
-* config
-* controllers
-* routes
-* models
-* middleware
-* services
-* socket
-* utils
-* validators
-* constants
-* helpers
-* logs
+↓
 
-Configure:
+Profile
 
-* Express
-* MongoDB Connection
-* JWT Setup
-* Helmet
-* Morgan
-* Compression
-* CORS
-* dotenv
-* Global Error Handler
-* Async Error Wrapper
+--------------------------------------------------
 
----
+Theme
 
-# Android Structure
+Dark Theme
 
-Create a clean Android Studio project with packages only.
+Modern AI Look
 
-Example:
+Blue + Purple Gradient
 
-* ui
-* services
-* accessibility
-* speech
-* tts
-* socket
-* intents
-* repository
-* models
-* utils
+Glassmorphism Cards
 
-Do not implement functionality yet.
+Rounded Components
 
----
+Smooth Animations
 
-# Documentation
+Material 3
 
-Create:
+Responsive UI
 
-* README
-* Installation Guide
-* Environment Variables Guide
-* Folder Explanation
-* Development Guide
+--------------------------------------------------
 
----
+Screens
 
-# Git
+1. Splash Screen
 
-Initialize Git.
+Animated Logo
 
-Recommend branch strategy:
+Loading Animation
 
-* main
-* develop
-* feature/*
-* bugfix/*
-* release/*
+App Version
 
----
+2. Login Screen
 
-# Environment Files
+Email
 
-Prepare:
+Password
 
-Frontend
+Remember Me
 
-.env
+Login Button
 
-Backend
+Forgot Password
 
-.env
+Go to Register
 
-Document every variable that will be required later, including placeholders for:
+3. Register Screen
 
-* MongoDB URI
-* JWT Secret
-* Gemini API Key
-* Socket Port
-* Client URL
+Name
 
-Do NOT use real secrets.
+Email
 
----
+Password
 
-# Deliverables
+Confirm Password
+
+Register Button
+
+Already Have Account
+
+4. Forgot Password
+
+Email Input
+
+Reset Button
+
+5. Dashboard
+
+Welcome Card
+
+Device Card
+
+Battery Card
+
+Quick Actions
+
+AI Status
+
+Recent Commands
+
+Connection Status
+
+6. AI Chat
+
+Modern Chat UI
+
+User Bubble
+
+AI Bubble
+
+Typing Indicator
+
+Input Box
+
+Send Button
+
+Microphone Button (Placeholder)
+
+Attach Button (Placeholder)
+
+Suggested Commands
+
+7. Command History
+
+Search
+
+Filter
+
+Recent Commands
+
+Status
+
+Time
+
+8. Device Status
+
+Phone Model
+
+Android Version
+
+Battery
+
+Storage
+
+RAM
+
+WiFi
+
+Connection Status
+
+9. Settings
+
+Theme
+
+Language
+
+Notifications
+
+Developer Mode
+
+Connection Settings
+
+About App
+
+10. Profile
+
+Profile Image
+
+Name
+
+Email
+
+Device Count
+
+Logout Button (Placeholder)
+
+--------------------------------------------------
+
+Bottom Navigation
+
+Home
+
+AI Chat
+
+History
+
+Settings
+
+--------------------------------------------------
+
+Components
+
+Top App Bar
+
+Bottom Navigation
+
+Navigation Drawer (Optional)
+
+Cards
+
+Buttons
+
+TextFields
+
+Search Bar
+
+Dialogs
+
+Snackbars
+
+Progress Indicators
+
+Empty State
+
+Loading Skeleton
+
+--------------------------------------------------
+
+Animations
+
+Splash Animation
+
+Page Transition
+
+Card Animation
+
+Button Animation
+
+Typing Animation
+
+Loading Animation
+
+--------------------------------------------------
+
+Architecture
+
+MVVM
+
+Repository Pattern
+
+StateFlow
+
+Reusable Components
+
+Feature-based Folder Structure
+
+--------------------------------------------------
+
+Folder Structure
+
+ui/
+
+screens/
+
+components/
+
+navigation/
+
+theme/
+
+viewmodel/
+
+repository/
+
+models/
+
+utils/
+
+services/
+
+--------------------------------------------------
+
+Mock Data
+
+Create realistic mock data for:
+
+User
+
+Battery
+
+Device Info
+
+Recent Commands
+
+Chat Messages
+
+Settings
+
+--------------------------------------------------
+
+Testing
+
+Test:
+
+Navigation
+
+UI Responsiveness
+
+Dark Theme
+
+Animations
+
+State Changes
+
+--------------------------------------------------
+
+Deliverables
 
 Generate:
 
-1. Complete folder tree
-2. Package list
-3. npm installation commands
-4. Configuration files
-5. Environment files
-6. Git setup
-7. README structure
-8. Development standards
-9. Code formatting rules
-10. Folder naming conventions
-11. Import conventions
-12. File naming conventions
-13. Commit message conventions
+1. Complete Jetpack Compose UI
 
----
+2. Navigation Graph
 
-# Rules
+3. Material 3 Theme
 
-* No AI implementation.
-* No authentication logic.
-* No Android functionality.
-* No business logic.
-* No API endpoints.
-* No UI screens.
+4. Reusable Components
 
-This phase is only about creating a production-ready foundation for the project.
+5. Dashboard
 
-After completing Phase 2, stop and wait for approval before starting Phase 3.
+6. AI Chat Screen
+
+7. Login UI
+
+8. Register UI
+
+9. Settings UI
+
+10. Profile UI
+
+11. Mock Data
+
+12. MVVM Structure
+
+13. Documentation
+
+--------------------------------------------------
+
+Rules
+
+Do NOT connect backend.
+
+Do NOT implement JWT.
+
+Do NOT implement real Login.
+
+Do NOT connect Gemini.
+
+Do NOT execute phone commands.
+
+Use mock data where required.
+
+Focus only on creating a beautiful, production-quality Android application.
+
+After completing Phase 9, stop and wait for approval before moving to Phase 10.
