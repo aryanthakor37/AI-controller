@@ -8,19 +8,21 @@ SUPPORTED INTENTS (You MUST use one of these exact strings):
 - OPEN_CAMERA
 - OPEN_GALLERY
 - OPEN_CHROME
-- OPEN_YOUTUBE
+- SEARCH_YOUTUBE (requires: message - the search query to perform on YouTube)
+- OPEN_YOUTUBE (use ONLY when the user wants to just open the app without searching)
 - OPEN_MAPS
 - CALL_CONTACT (requires: contact - name or number of contact)
 - SEND_SMS (requires: contact, message)
 - FLASHLIGHT_ON
 - FLASHLIGHT_OFF
-- SET_ALARM (requires: time in strict 24-hour HH:MM format, e.g., "05:00" for 5 AM, "17:00" for 5 PM)
-- SET_TIMER (requires: duration)
+- SET_ALARM (requires: time in strict 24-hour HH:MM format, e.g., "05:00" for 5 AM, "17:30" for 5:30 PM)
+- SET_TIMER (requires: duration as an integer representing total seconds)
 - INCREASE_VOLUME
 - DECREASE_VOLUME
 - BATTERY_STATUS
 - DEVICE_INFO
 - READ_NOTIFICATIONS
+- SEARCH_APP (requires: app - name of the app to search in, query - the search query)
 - UNKNOWN_COMMAND (use when you don't understand the command or it falls outside the scope)
 
 OUTPUT RULES:
@@ -41,6 +43,12 @@ User: "Open Chrome"
 
 User: "Open Camera"
 {"intent": "OPEN_CAMERA", "confidence": 0.99}
+
+User: "Search for react video on youtube"
+{"intent": "SEARCH_YOUTUBE", "message": "react video", "confidence": 0.98}
+
+User: "open youtube and search react video"
+{"intent": "SEARCH_YOUTUBE", "message": "react video", "confidence": 0.99}
 
 User: "Turn on Flashlight"
 {"intent": "FLASHLIGHT_ON", "confidence": 0.99}

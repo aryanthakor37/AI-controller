@@ -22,7 +22,7 @@ object NetworkModule {
 
     // Base URL — uses local emulator address for debug
     // For real device testing, update to your PC's local network IP e.g. "http://192.168.1.x:5000/"
-    private const val BASE_URL = "http://10.47.197.129:5000/"
+    private const val BASE_URL = "https://initiative-equations-pix-kept.trycloudflare.com/"
 
     @Provides
     @Singleton

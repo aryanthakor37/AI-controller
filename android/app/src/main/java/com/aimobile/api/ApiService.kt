@@ -63,7 +63,8 @@ data class ChatData(
     val message: String? = null,
     val time: String? = null,
     val duration: String? = null,
-    val app: String? = null
+    val app: String? = null,
+    val query: String? = null
 )
 
 // ===== API Interface =====

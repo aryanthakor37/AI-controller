@@ -27,7 +27,7 @@ fun PairingScreen(onPaired: () -> Unit) {
     // Build Retrofit manually here since PairingScreen runs before auth (no token yet)
     val apiService = remember {
         Retrofit.Builder()
-            .baseUrl("http://10.47.197.129:5000/")
+            .baseUrl("https://initiative-equations-pix-kept.trycloudflare.com/")
             .client(OkHttpClient.Builder().build())
             .addConverterFactory(GsonConverterFactory.create())
             .build()

@@ -28,19 +28,41 @@ class IntentRouter(private val context: Context) {
                 "OPEN_FILES", "OPEN_PHOTOS" -> openAppHandler.openApp(request.intent)
                 
                 "OPEN_APP" -> {
-                    val appName = request.message ?: ""
+                    val appName = request.app ?: request.message ?: ""
                     if (appName.equals("WhatsApp", ignoreCase = true) || request.intent.contains("WhatsApp")) {
                         openAppHandler.openApp("OPEN_WHATSAPP")
                     } else {
-                        // Attempt to open settings as a fallback or search launch intent
-                        val pkgIntent = context.packageManager.getLaunchIntentForPackage(appName)
-                        if (pkgIntent != null) {
-                            pkgIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            context.startActivity(pkgIntent)
-                            CommandResult("Success", "Opened $appName")
+                        val packageName = getPackageNameFromAppName(appName)
+                        if (packageName != null) {
+                            val pkgIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+                            if (pkgIntent != null) {
+                                pkgIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(pkgIntent)
+                                CommandResult("Success", "Opened $appName")
+                            } else {
+                                CommandResult("Failed", "Could not launch $appName")
+                            }
                         } else {
-                            CommandResult("Failed", "App package not found for: $appName")
+                            CommandResult("Failed", "App not found: $appName")
                         }
+                    }
+                }
+
+                "SEARCH_APP" -> {
+                    val appName = request.app ?: ""
+                    val query = request.query ?: request.message ?: ""
+                    val packageName = getPackageNameFromAppName(appName)
+                    if (packageName != null) {
+                        val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                        if (service == null) {
+                            CommandResult("Permission Required", "Accessibility Service is disabled.")
+                        } else {
+                            com.aimobile.accessibility.automation.UniversalSearch.runUniversalSearch(
+                                service, context, packageName, query
+                            )
+                        }
+                    } else {
+                        CommandResult("Failed", "App not found: $appName")
                     }
                 }
 
@@ -88,8 +110,14 @@ class IntentRouter(private val context: Context) {
                 "DECREASE_VOLUME" -> volumeHandler.decreaseVolume()
                 "MUTE_VOLUME", "MUTE_PHONE" -> volumeHandler.muteVolume()
                 
-                "SET_ALARM" -> alarmHandler.setAlarm(request.hour ?: 0, request.minute ?: 0)
-                "START_TIMER", "SET_TIMER" -> alarmHandler.setTimer((request.minute ?: 0) * 60)
+                "SET_ALARM" -> {
+                    val timeStr = request.time ?: "00:00"
+                    val parts = timeStr.split(":")
+                    val h = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                    val m = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                    alarmHandler.setAlarm(h, m)
+                }
+                "START_TIMER", "SET_TIMER" -> alarmHandler.setTimer(request.duration ?: 0)
                 
                 "BATTERY_STATUS" -> deviceInfoHandler.getBatteryStatus()
                 "NETWORK_STATUS", "NETWORK_STATUS_CHECK" -> deviceInfoHandler.getNetworkStatus()
@@ -116,5 +144,19 @@ class IntentRouter(private val context: Context) {
         } catch (e: Exception) {
             CommandResult(status = "Failed", message = "Router error: ${e.message}")
         }
+    }
+
+    private fun getPackageNameFromAppName(appName: String): String? {
+        val pm = context.packageManager
+        val packages = pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
+        for (packageInfo in packages) {
+            val label = pm.getApplicationLabel(packageInfo).toString()
+            if (label.equals(appName, ignoreCase = true) || label.contains(appName, ignoreCase = true)) {
+                if (pm.getLaunchIntentForPackage(packageInfo.packageName) != null) {
+                    return packageInfo.packageName
+                }
+            }
+        }
+        return null
     }
 }

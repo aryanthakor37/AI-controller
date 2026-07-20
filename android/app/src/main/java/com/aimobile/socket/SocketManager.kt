@@ -17,7 +17,7 @@ class SocketManager(private val context: Context) {
     private val tokenManager = TokenManager(context)
     private val gson = Gson()
 
-    fun connect(serverUrl: String = "http://10.47.197.129:5000") {
+    fun connect(serverUrl: String = "http://192.168.1.165:5000") {
         if (socket?.connected() == true) return
         try {
             val token = tokenManager.getToken()
@@ -29,8 +29,8 @@ class SocketManager(private val context: Context) {
             val options = IO.Options()
             options.transports = arrayOf(io.socket.engineio.client.transports.Polling.NAME)
             options.auth = Collections.singletonMap("token", token)
-            
-            socket = IO.socket(serverUrl, options)
+            // Point to Cloudflare tunnel
+            socket = IO.socket("https://initiative-equations-pix-kept.trycloudflare.com", options)
 
             socket?.on(Socket.EVENT_CONNECT) {
                 Log.d("SocketManager", "Connected to Backend")

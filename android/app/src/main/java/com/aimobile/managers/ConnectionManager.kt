@@ -9,10 +9,12 @@ import org.json.JSONObject
 import java.net.URISyntaxException
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.aimobile.utils.TokenManager
 
 @Singleton
 class ConnectionManager @Inject constructor(
-    private val deviceInfoManager: DeviceInfoManager
+    private val deviceInfoManager: DeviceInfoManager,
+    private val tokenManager: TokenManager
 ) {
     private var socket: Socket? = null
     
@@ -23,8 +25,16 @@ class ConnectionManager @Inject constructor(
         if (socket?.connected() == true) return
 
         try {
-            // Point to local machine's IP (for physical Android device)
-            socket = IO.socket("http://192.168.1.165:5000")
+            val token = tokenManager.getToken()
+            if (token == null) {
+                Log.e("ConnectionManager", "Cannot connect to socket without a token")
+                return
+            }
+            val options = IO.Options()
+            options.query = "token=$token"
+            
+            // Point to Cloudflare URL
+            socket = IO.socket("https://initiative-equations-pix-kept.trycloudflare.com", options)
             
             socket?.on(Socket.EVENT_CONNECT) {
                 Log.d("ConnectionManager", "Socket Connected")

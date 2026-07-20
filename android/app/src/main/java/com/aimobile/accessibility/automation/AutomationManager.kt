@@ -60,6 +60,25 @@ object AutomationManager {
         return false
     }
 
+    suspend fun clickNodeByContentDescription(service: AccessibilityService, desc: String, retryCount: Int = 3): Boolean {
+        addLog("Trying to click content description: $desc")
+        for (i in 0 until retryCount) {
+            val rootNode = service.rootInActiveWindow ?: continue
+            val nodes = rootNode.findAccessibilityNodeInfosByText(desc)
+            if (!nodes.isNullOrEmpty()) {
+                val match = nodes.firstOrNull { it.contentDescription?.toString()?.equals(desc, ignoreCase = true) == true }
+                val clicked = performClick(match ?: nodes[0])
+                if (clicked) {
+                    addLog("Successfully clicked content description: $desc")
+                    return true
+                }
+            }
+            delay(1000)
+        }
+        addLog("Failed to click content description: $desc")
+        return false
+    }
+
     suspend fun inputTextIntoId(service: AccessibilityService, viewId: String, text: String, retryCount: Int = 3): Boolean {
         addLog("Trying to input text into ID: $viewId")
         for (i in 0 until retryCount) {

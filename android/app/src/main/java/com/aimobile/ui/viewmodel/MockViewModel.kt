@@ -169,9 +169,10 @@ class MockViewModel @Inject constructor(
                             // Route the successful command locally as well to make it work from Chat screen!
                             val request = com.aimobile.models.CommandRequest(
                                 intent = data.intent,
-                                number = data.number ?: data.contact,
-                                hour = null, // simplified for chat viewmodel
-                                minute = null,
+                                number = null,
+                                time = null,
+                                duration = null,
+                                query = null,
                                 message = data.message ?: data.app
                             )
                             intentRouter.route(request)
@@ -258,8 +259,9 @@ class MockViewModel @Inject constructor(
         val request = com.aimobile.models.CommandRequest(
             intent = intent,
             number = null,
-            hour = null,
-            minute = null,
+            time = null,
+            duration = null,
+            query = null,
             message = appName
         )
         

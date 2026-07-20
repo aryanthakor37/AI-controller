@@ -74,40 +74,16 @@ object AppAutomations {
     suspend fun runYouTubeAutomation(service: AccessibilityService, context: Context, query: String): CommandResult {
         AutomationManager.addLog("Starting YouTube search for: $query")
 
-        val intent = context.packageManager.getLaunchIntentForPackage("com.google.android.youtube")
-            ?: return CommandResult("Failed", "YouTube not installed")
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
-        delay(2000)
-
-        // Click search icon
-        var searchClicked = AutomationManager.clickNodeById(service, "com.google.android.youtube:id/search_button")
-        if (!searchClicked) {
-            searchClicked = AutomationManager.clickNodeByText(service, "Search")
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.data = android.net.Uri.parse("https://www.youtube.com/results?search_query=" + android.net.Uri.encode(query))
+            intent.setPackage("com.google.android.youtube")
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            context.startActivity(intent)
+            CommandResult("Success", "Searching YouTube for: $query")
+        } catch (e: Exception) {
+            CommandResult("Failed", "YouTube not installed or error: ${e.message}")
         }
-        if (!searchClicked) {
-            return CommandResult("Failed", "Could not find YouTube search button")
-        }
-        delay(1000)
-
-        // Type query
-        var inputDone = AutomationManager.inputTextIntoId(service, "com.google.android.youtube:id/search_edit_text", query)
-        if (!inputDone) {
-            inputDone = AutomationManager.findAndInputText(service, query)
-        }
-        if (!inputDone) {
-            return CommandResult("Failed", "Could not enter YouTube search query")
-        }
-        delay(1000)
-
-        // Press suggestion or click search
-        val goClicked = AutomationManager.clickNodeById(service, "com.google.android.youtube:id/search_type_suggest")
-        if (!goClicked) {
-            // Send default search key action
-            Log.d("YouTubeAuto", "Suggested suggestion search not found, searching suggestions list...")
-        }
-
-        return CommandResult("Success", "Searching YouTube for: $query")
     }
 
     suspend fun runChromeAutomation(service: AccessibilityService, context: Context, url: String): CommandResult {

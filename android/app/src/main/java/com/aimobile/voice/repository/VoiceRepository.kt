@@ -120,12 +120,16 @@ class VoiceRepository @Inject constructor(
             return VoiceCommandResult.Error("Offline: Command not recognized.")
         }
 
+        val timeStr = if (hour != null && minute != null) String.format("%02d:%02d", hour, minute) else null
+        
         val request = CommandRequest(
             intent = intent,
             number = contactName,
-            hour = hour,
-            minute = minute,
-            message = appName ?: smsMsg
+            time = timeStr,
+            duration = null,
+            query = null,
+            message = appName ?: smsMsg,
+            app = appName
         )
         
         val reply = when (intent) {
@@ -147,48 +151,22 @@ class VoiceRepository @Inject constructor(
     private fun mapChatDataToCommandRequest(chatData: com.aimobile.api.ChatData): CommandRequest {
         val intent = chatData.intent ?: "UNKNOWN_COMMAND"
         
-        // Parse time if format is "HH:MM"
-        var hour: Int? = null
-        var minute: Int? = null
-        val timeStr = chatData.time
-        if (!timeStr.isNullOrEmpty()) {
-            if (timeStr.contains(":")) {
-                val parts = timeStr.split(":")
-                if (parts.size >= 2) {
-                    var h = parts[0].toIntOrNull()
-                    val mStr = parts[1].filter { it.isDigit() }
-                    val m = mStr.toIntOrNull()
-                    
-                    if (timeStr.contains("pm", ignoreCase = true) && h != null && h < 12) h += 12
-                    if (timeStr.contains("am", ignoreCase = true) && h != null && h == 12) h = 0
-                    
-                    hour = h
-                    minute = m
-                }
-            } else {
-                var h = timeStr.filter { it.isDigit() }.toIntOrNull()
-                if (timeStr.contains("pm", ignoreCase = true) && h != null && h < 12) h += 12
-                if (timeStr.contains("am", ignoreCase = true) && h != null && h == 12) h = 0
-                
-                hour = h
-                minute = 0
-            }
-        }
-        
-        // Parse duration in minutes from duration string (e.g., "5" or "5 minutes")
-        var durationMinutes: Int? = null
+        // Parse duration in seconds from duration string if possible
+        var durationSeconds: Int? = null
         val durStr = chatData.duration
         if (!durStr.isNullOrEmpty()) {
             val digitsOnly = durStr.filter { it.isDigit() }
-            durationMinutes = digitsOnly.toIntOrNull()
+            durationSeconds = digitsOnly.toIntOrNull()
         }
 
         return CommandRequest(
             intent = intent,
             number = chatData.number ?: chatData.contact,
-            hour = hour,
-            minute = minute ?: durationMinutes, // maps minute parameter to timer duration if needed
-            message = chatData.message ?: chatData.app
+            time = chatData.time,
+            duration = durationSeconds,
+            query = chatData.query,
+            message = chatData.message,
+            app = chatData.app
         )
     }
 }

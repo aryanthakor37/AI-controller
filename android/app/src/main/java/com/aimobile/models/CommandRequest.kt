@@ -13,12 +13,18 @@ data class CommandRequest(
     @SerializedName("number")
     val number: String? = null,
     
-    @SerializedName("hour")
-    val hour: Int? = null,
+    @SerializedName("time")
+    val time: String? = null,
     
-    @SerializedName("minute")
-    val minute: Int? = null,
+    @SerializedName("duration")
+    val duration: Int? = null,
+    
+    @SerializedName("query")
+    val query: String? = null,
     
     @SerializedName("message")
-    val message: String? = null
+    val message: String? = null,
+    
+    @SerializedName("app")
+    val app: String? = null
 )
