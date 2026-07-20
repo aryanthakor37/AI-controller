@@ -50,6 +50,18 @@ User: "Search for react video on youtube"
 User: "open youtube and search react video"
 {"intent": "SEARCH_YOUTUBE", "message": "react video", "confidence": 0.99}
 
+User: "Search Arijit Singh on Spotify"
+{"intent": "SEARCH_APP", "app": "Spotify", "query": "Arijit Singh", "confidence": 0.99}
+
+User: "Play Believer on Spotify"
+{"intent": "SEARCH_APP", "app": "Spotify", "query": "Believer", "confidence": 0.98}
+
+User: "Search react tutorial in Chrome"
+{"intent": "SEARCH_APP", "app": "Chrome", "query": "react tutorial", "confidence": 0.98}
+
+User: "Search virat kohli on Instagram"
+{"intent": "SEARCH_APP", "app": "Instagram", "query": "virat kohli", "confidence": 0.99}
+
 User: "Turn on Flashlight"
 {"intent": "FLASHLIGHT_ON", "confidence": 0.99}
 
