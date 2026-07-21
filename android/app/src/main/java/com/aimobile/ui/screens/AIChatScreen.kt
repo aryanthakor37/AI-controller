@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
@@ -13,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -51,14 +54,16 @@ fun AIChatScreen(viewModel: MockViewModel, modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(SurfaceDark)
+                .shadow(elevation = 12.dp, spotColor = PrimaryBlue)
+                .background(SurfaceDark.copy(alpha = 0.85f))
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(46.dp)
+                        .shadow(elevation = 8.dp, shape = CircleShape, spotColor = AccentPurple)
+                        .clip(CircleShape)
                         .background(Brush.linearGradient(listOf(PrimaryBlue, AccentPurple))),
                     contentAlignment = Alignment.Center
                 ) {
@@ -113,26 +118,28 @@ fun AIChatScreen(viewModel: MockViewModel, modifier: Modifier = Modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(SurfaceDark)
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .shadow(elevation = 20.dp, shape = CircleShape, spotColor = PrimaryBlue)
+                .background(SurfaceDark, CircleShape)
+                .border(1.dp, Color.White.copy(alpha = 0.08f), CircleShape)
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                placeholder = { Text("Ask me to do something...", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp) },
+                placeholder = { Text("Ask me to do something...", color = Color.White.copy(alpha = 0.4f), fontSize = 15.sp) },
                 modifier = Modifier.weight(1f),
                 colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = Color.White.copy(alpha = 0.05f),
-                    focusedBorderColor = PrimaryBlue.copy(alpha = 0.5f),
-                    unfocusedBorderColor = Color.White.copy(alpha = 0.1f),
+                    containerColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White
                 ),
-                shape = RoundedCornerShape(16.dp),
                 maxLines = 3
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             IconButton(
                 onClick = {
                     val text = inputText.trim()
@@ -142,8 +149,9 @@ fun AIChatScreen(viewModel: MockViewModel, modifier: Modifier = Modifier) {
                     }
                 },
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .size(52.dp)
+                    .shadow(elevation = 8.dp, shape = CircleShape, spotColor = AccentPurple)
+                    .clip(CircleShape)
                     .background(
                         if (!isLoading) Brush.linearGradient(listOf(PrimaryBlue, AccentPurple))
                         else Brush.linearGradient(listOf(Color.Gray, Color.Gray))
@@ -162,26 +170,30 @@ fun ChatBubble(message: MockChatMessage) {
         horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
     ) {
         if (message.isUser) {
-            // User bubble — right side, blue gradient
+            // User bubble — right side, 3D blue gradient
             Box(
                 modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 4.dp, bottomStart = 16.dp, bottomEnd = 16.dp))
+                    .widthIn(max = 290.dp)
+                    .shadow(elevation = 10.dp, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 6.dp, bottomStart = 24.dp, bottomEnd = 24.dp), spotColor = PrimaryBlue)
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 6.dp, bottomStart = 24.dp, bottomEnd = 24.dp))
                     .background(Brush.linearGradient(listOf(PrimaryBlue, AccentPurple)))
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .border(1.5.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.4f), Color.Transparent)), RoundedCornerShape(topStart = 24.dp, topEnd = 6.dp, bottomStart = 24.dp, bottomEnd = 24.dp))
+                    .padding(horizontal = 18.dp, vertical = 14.dp)
             ) {
-                Text(text = message.text, color = Color.White, fontSize = 14.sp, lineHeight = 20.sp)
+                Text(text = message.text, color = Color.White, fontSize = 15.sp, lineHeight = 22.sp)
             }
         } else {
-            // AI bubble — left side, dark glass
+            // AI bubble — left side, 3D dark glass
             Box(
                 modifier = Modifier
-                    .widthIn(max = 280.dp)
-                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp))
-                    .background(SurfaceDark)
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .widthIn(max = 290.dp)
+                    .shadow(elevation = 8.dp, shape = RoundedCornerShape(topStart = 6.dp, topEnd = 24.dp, bottomStart = 24.dp, bottomEnd = 24.dp), spotColor = Color.Black)
+                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 24.dp, bottomStart = 24.dp, bottomEnd = 24.dp))
+                    .background(SurfaceDark.copy(alpha = 0.9f))
+                    .border(1.5.dp, Brush.linearGradient(listOf(Color.White.copy(alpha = 0.2f), Color.Transparent)), RoundedCornerShape(topStart = 6.dp, topEnd = 24.dp, bottomStart = 24.dp, bottomEnd = 24.dp))
+                    .padding(horizontal = 18.dp, vertical = 14.dp)
             ) {
-                Text(text = message.text, color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, lineHeight = 20.sp)
+                Text(text = message.text, color = Color.White.copy(alpha = 0.95f), fontSize = 15.sp, lineHeight = 22.sp)
             }
         }
     }

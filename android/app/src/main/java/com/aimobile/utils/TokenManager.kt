@@ -25,6 +25,29 @@ class TokenManager(context: Context) {
 
     fun isLoggedIn(): Boolean = getAccessToken() != null && getRefreshToken() != null
 
+    // Server URL configuration
+    fun saveServerUrl(url: String) = prefs.edit().putString("server_url", url).apply()
+    
+    fun getServerUrl(): String {
+        val rawUrl = prefs.getString("server_url", "https://aimobile-backend.onrender.com/") ?: "https://aimobile-backend.onrender.com/"
+        var clean = rawUrl.trim()
+        if (clean.isEmpty()) {
+            return "https://aimobile-backend.onrender.com/"
+        }
+        if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+            clean = "http://$clean"
+        }
+        if (!clean.endsWith("/")) {
+            clean = "$clean/"
+        }
+        return try {
+            java.net.URL(clean)
+            clean
+        } catch (e: Exception) {
+            "https://aimobile-backend.onrender.com/"
+        }
+    }
+
     fun clearAll() {
         prefs.edit().clear().apply()
     }
@@ -32,4 +55,5 @@ class TokenManager(context: Context) {
     // Legacy
     fun clearToken() = clearAll()
 }
+
 

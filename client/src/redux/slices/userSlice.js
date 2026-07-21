@@ -38,6 +38,21 @@ export const registerUser = createAsyncThunk('auth/register', async (userData, t
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Registration failed');
+    return data;
+  } catch (error) {
+    return thunkAPI.rejectWithValue(error.message);
+  }
+});
+
+export const verifyEmail = createAsyncThunk('auth/verifyEmail', async (verificationData, thunkAPI) => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/verify-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(verificationData),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Verification failed');
     localStorage.setItem('user', JSON.stringify(data));
     localStorage.setItem('token', data.token);
     return data;
@@ -76,13 +91,22 @@ export const userSlice = createSlice({
         state.error = action.payload;
       })
       .addCase(registerUser.pending, (state) => { state.loading = true; state.error = null; })
-      .addCase(registerUser.fulfilled, (state, action) => {
+      .addCase(registerUser.fulfilled, (state) => {
+        state.loading = false;
+        state.error = null;
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(verifyEmail.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(verifyEmail.fulfilled, (state, action) => {
         state.loading = false;
         state.isAuthenticated = true;
         state.user = action.payload;
         state.token = action.payload.token;
       })
-      .addCase(registerUser.rejected, (state, action) => {
+      .addCase(verifyEmail.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

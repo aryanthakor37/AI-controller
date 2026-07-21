@@ -23,6 +23,9 @@ import com.aimobile.ui.components.GlassCard
 import com.aimobile.ui.theme.DarkBackground
 import com.aimobile.ui.theme.PrimaryBlue
 import com.aimobile.ui.viewmodel.MockViewModel
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 
 @Composable
 fun SettingsScreen(
@@ -48,6 +51,50 @@ fun SettingsScreen(
                 SettingToggleRow(title = "Push Notifications", defaultChecked = true)
                 Spacer(modifier = Modifier.height(16.dp))
                 SettingToggleRow(title = "Developer Mode", defaultChecked = false)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Connection Settings",
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        val context = LocalContext.current
+        var serverUrl by remember { mutableStateOf(viewModel.getServerUrl()) }
+
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                OutlinedTextField(
+                    value = serverUrl,
+                    onValueChange = { serverUrl = it },
+                    label = { Text("Server URL", color = Color.Gray) },
+                    singleLine = true,
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = PrimaryBlue,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedLabelColor = PrimaryBlue,
+                        unfocusedLabelColor = Color.Gray
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                com.aimobile.ui.components.PrimaryButton(
+                    text = "Save Server URL",
+                    onClick = {
+                        viewModel.saveServerUrl(serverUrl)
+                        Toast.makeText(context, "Server URL saved!", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 

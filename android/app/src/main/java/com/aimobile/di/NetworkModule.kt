@@ -20,10 +20,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    // Base URL — uses local emulator address for debug
-    // For real device testing, update to your PC's local network IP e.g. "http://192.168.1.x:5000/"
-    private const val BASE_URL = "https://initiative-equations-pix-kept.trycloudflare.com/"
-
     @Provides
     @Singleton
     fun provideTokenManager(@ApplicationContext context: Context): TokenManager {
@@ -52,9 +48,12 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient, tokenManager: TokenManager): Retrofit {
+        val baseUrl = tokenManager.getServerUrl().let {
+            if (it.endsWith("/")) it else "$it/"
+        }
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()

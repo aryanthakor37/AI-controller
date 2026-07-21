@@ -61,6 +61,21 @@ class VoiceRepository @Inject constructor(
         var timerDuration: String? = null
 
         when {
+            clean.startsWith("search ") || clean.startsWith("play ") -> {
+                intent = "SEARCH_APP"
+                val regexWord = if (clean.startsWith("search ")) "search" else "play"
+                val match = Regex("$regexWord\\s+(.*?)\\s+(?:in|on)\\s+(.*)").find(clean)
+                if (match != null) {
+                    smsMsg = match.groupValues[1].trim() // query
+                    appName = match.groupValues[2].trim() // app
+                } else {
+                    val simpleMatch = Regex("$regexWord\\s+(.*)").find(clean)
+                    if (simpleMatch != null) {
+                        smsMsg = simpleMatch.groupValues[1].trim() // query
+                        appName = "YouTube" // default app
+                    }
+                }
+            }
             clean.contains("flashlight on") || clean.contains("torch on") || clean.contains("turn on flashlight") || clean.contains("turn on torch") || clean.contains("flashlight open") || clean.contains("fleshlight open") -> {
                 intent = "FLASHLIGHT_ON"
             }
@@ -107,9 +122,9 @@ class VoiceRepository @Inject constructor(
                 }
             }
             else -> {
-                if (clean.startsWith("open ")) {
+                if (clean.startsWith("open ") || clean.startsWith("launch ") || clean.startsWith("start ")) {
                     intent = "OPEN_APP"
-                    appName = command.substring(5).trim()
+                    appName = clean.replace("open ", "").replace("launch ", "").replace("start ", "").replace("app ", "").trim()
                 } else {
                     intent = "UNKNOWN_COMMAND"
                 }
@@ -127,8 +142,8 @@ class VoiceRepository @Inject constructor(
             number = contactName,
             time = timeStr,
             duration = null,
-            query = null,
-            message = appName ?: smsMsg,
+            query = smsMsg,
+            message = smsMsg,
             app = appName
         )
         

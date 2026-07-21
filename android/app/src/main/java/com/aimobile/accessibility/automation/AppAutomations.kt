@@ -25,7 +25,9 @@ object AppAutomations {
         // Try standard WhatsApp view IDs or search text fallback
         var searchClicked = AutomationManager.clickNodeById(service, "com.whatsapp:id/menuitem_search")
         if (!searchClicked) {
-            searchClicked = AutomationManager.clickNodeByText(service, "Search")
+            searchClicked = AutomationManager.clickNodeByText(service, "Search") ||
+                            AutomationManager.clickNodeByText(service, "શોધો") ||
+                            AutomationManager.clickNodeByText(service, "खोजें")
         }
         if (!searchClicked) {
             return CommandResult("Failed", "Could not find search button in WhatsApp")
@@ -71,40 +73,90 @@ object AppAutomations {
         return CommandResult("Success", "Message sent to $contact via WhatsApp")
     }
 
-    suspend fun runYouTubeAutomation(service: AccessibilityService, context: Context, query: String): CommandResult {
+    suspend fun runYouTubeAutomation(service: AccessibilityService?, context: Context, query: String): CommandResult {
         AutomationManager.addLog("Starting YouTube search for: $query")
 
         return try {
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.data = android.net.Uri.parse("https://www.youtube.com/results?search_query=" + android.net.Uri.encode(query))
-            intent.setPackage("com.google.android.youtube")
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            val searchUrl = "https://www.youtube.com/results?search_query=" + android.net.Uri.encode(query)
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(searchUrl)).apply {
+                setPackage("com.google.android.youtube")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
             context.startActivity(intent)
             CommandResult("Success", "Searching YouTube for: $query")
         } catch (e: Exception) {
-            CommandResult("Failed", "YouTube not installed or error: ${e.message}")
+            try {
+                val searchUrl = "https://www.youtube.com/results?search_query=" + android.net.Uri.encode(query)
+                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(searchUrl)).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+                CommandResult("Success", "Searching YouTube via Browser for: $query")
+            } catch (e2: Exception) {
+                CommandResult("Failed", "Error opening search: ${e2.message}")
+            }
         }
     }
 
-    suspend fun runChromeAutomation(service: AccessibilityService, context: Context, url: String): CommandResult {
-        AutomationManager.addLog("Starting Chrome automation: $url")
+    suspend fun runSpotifyAutomation(service: AccessibilityService?, context: Context, query: String): CommandResult {
+        AutomationManager.addLog("Starting Spotify search for: $query")
 
-        val intent = context.packageManager.getLaunchIntentForPackage("com.android.chrome")
-            ?: return CommandResult("Failed", "Chrome not installed")
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
-        delay(2000)
-
-        // Click search/url bar
-        var barClicked = AutomationManager.inputTextIntoId(service, "com.android.chrome:id/url_bar", url)
-        if (!barClicked) {
-            barClicked = AutomationManager.findAndInputText(service, url)
+        return try {
+            val searchUrl = "https://open.spotify.com/search/" + android.net.Uri.encode(query)
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(searchUrl)).apply {
+                setPackage("com.spotify.music")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+            CommandResult("Success", "Searching Spotify for: $query")
+        } catch (e: Exception) {
+            try {
+                val searchUrl = "https://open.spotify.com/search/" + android.net.Uri.encode(query)
+                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(searchUrl)).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+                CommandResult("Success", "Searching Spotify via Browser for: $query")
+            } catch (e2: Exception) {
+                CommandResult("Failed", "Error opening search: ${e2.message}")
+            }
         }
+    }
 
-        return if (barClicked) {
-            CommandResult("Success", "Loading website: $url in Chrome")
-        } else {
-            CommandResult("Failed", "Could not locate URL bar in Chrome")
+    suspend fun runChromeAutomation(service: AccessibilityService?, context: Context, url: String): CommandResult {
+        AutomationManager.addLog("Starting Chrome automation: $url")
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW)
+            var finalUrl = url.trim()
+            if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
+                if (finalUrl.contains(".") && !finalUrl.contains(" ")) {
+                    finalUrl = "https://$finalUrl"
+                } else {
+                    finalUrl = "https://www.google.com/search?q=" + android.net.Uri.encode(finalUrl)
+                }
+            }
+            intent.data = android.net.Uri.parse(finalUrl)
+            intent.setPackage("com.android.chrome")
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            context.startActivity(intent)
+            CommandResult("Success", "Loaded in Chrome: $url")
+        } catch (e: Exception) {
+            CommandResult("Failed", "Chrome not installed or error: ${e.message}")
+        }
+    }
+
+    suspend fun runInstagramAutomation(service: AccessibilityService?, context: Context, query: String): CommandResult {
+        AutomationManager.addLog("Starting Instagram automation for: $query")
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW)
+            val cleanQuery = query.replace(" ", "").trim()
+            intent.data = android.net.Uri.parse("https://www.instagram.com/$cleanQuery/")
+            intent.setPackage("com.instagram.android")
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            context.startActivity(intent)
+            CommandResult("Success", "Opening Instagram profile: $cleanQuery")
+        } catch (e: Exception) {
+            CommandResult("Failed", "Instagram not installed or error: ${e.message}")
         }
     }
 }

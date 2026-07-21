@@ -31,12 +31,18 @@ fun RegisterScreen(
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var otpCode by remember { mutableStateOf("") }
+    var showOtpInput by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val authState by authViewModel.authState.collectAsState()
 
     LaunchedEffect(authState) {
         when (authState) {
+            is AuthState.RegisterSuccess -> {
+                errorMessage = null
+                showOtpInput = true
+            }
             is AuthState.Success -> {
                 errorMessage = null
                 onRegisterSuccess()
@@ -58,37 +64,61 @@ fun RegisterScreen(
                 modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Create Account", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Join Agent.AI today", fontSize = 14.sp, color = Color.White.copy(alpha = 0.6f))
-                Spacer(modifier = Modifier.height(32.dp))
+                if (showOtpInput) {
+                    Text("Verify Email", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Verification code sent to $email", fontSize = 14.sp, color = Color.White.copy(alpha = 0.6f))
+                    Spacer(modifier = Modifier.height(32.dp))
 
-                CustomTextField(value = name, onValueChange = { name = it }, label = "Full Name")
-                Spacer(modifier = Modifier.height(16.dp))
-                CustomTextField(value = email, onValueChange = { email = it }, label = "Email Address")
-                Spacer(modifier = Modifier.height(16.dp))
-                CustomTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = "Password",
-                    visualTransformation = PasswordVisualTransformation()
-                )
+                    CustomTextField(value = otpCode, onValueChange = { otpCode = it }, label = "Verification Code")
+                    
+                    if (errorMessage != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(errorMessage!!, color = Color.Red.copy(alpha = 0.8f), fontSize = 13.sp)
+                    }
 
-                // Error message
-                if (errorMessage != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(errorMessage!!, color = Color.Red.copy(alpha = 0.8f), fontSize = 13.sp)
-                }
+                    Spacer(modifier = Modifier.height(32.dp))
 
-                Spacer(modifier = Modifier.height(32.dp))
-
-                if (authState is AuthState.Loading) {
-                    CircularProgressIndicator(color = PrimaryBlue)
+                    if (authState is AuthState.Loading) {
+                        CircularProgressIndicator(color = PrimaryBlue)
+                    } else {
+                        PrimaryButton(text = "Verify & Sign In", onClick = {
+                            errorMessage = null
+                            authViewModel.verifyEmail(email, otpCode)
+                        })
+                    }
                 } else {
-                    PrimaryButton(text = "Sign Up", onClick = {
-                        errorMessage = null
-                        authViewModel.register(name, email, password)
-                    })
+                    Text("Create Account", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Join Agent.AI today", fontSize = 14.sp, color = Color.White.copy(alpha = 0.6f))
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    CustomTextField(value = name, onValueChange = { name = it }, label = "Full Name")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CustomTextField(value = email, onValueChange = { email = it }, label = "Email Address")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CustomTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = "Password",
+                        visualTransformation = PasswordVisualTransformation()
+                    )
+
+                    if (errorMessage != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(errorMessage!!, color = Color.Red.copy(alpha = 0.8f), fontSize = 13.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    if (authState is AuthState.Loading) {
+                        CircularProgressIndicator(color = PrimaryBlue)
+                    } else {
+                        PrimaryButton(text = "Sign Up", onClick = {
+                            errorMessage = null
+                            authViewModel.register(name, email, password)
+                        })
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))

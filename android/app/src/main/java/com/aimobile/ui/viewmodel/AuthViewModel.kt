@@ -16,6 +16,7 @@ sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     data class Success(val user: AuthResponse) : AuthState()
+    data class RegisterSuccess(val email: String) : AuthState()
     data class Error(val message: String) : AuthState()
     object LoggedOut : AuthState()
 }
@@ -53,6 +54,20 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _authState.value = AuthState.Loading
             when (val result = authRepository.register(fullName.trim(), email.trim(), password)) {
+                is AuthResult.Success -> _authState.value = AuthState.RegisterSuccess(email.trim())
+                is AuthResult.Error -> _authState.value = AuthState.Error(result.message)
+            }
+        }
+    }
+
+    fun verifyEmail(email: String, code: String) {
+        if (email.isBlank() || code.isBlank()) {
+            _authState.value = AuthState.Error("Email and code cannot be empty")
+            return
+        }
+        viewModelScope.launch {
+            _authState.value = AuthState.Loading
+            when (val result = authRepository.verifyEmail(email, code)) {
                 is AuthResult.Success -> _authState.value = AuthState.Success(result.data)
                 is AuthResult.Error -> _authState.value = AuthState.Error(result.message)
             }
