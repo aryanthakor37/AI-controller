@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getApiUrl } from '../config';
-import { loginUser, verifyEmail } from '../redux/slices/userSlice';
+import { loginUser } from '../redux/slices/userSlice';
 import { Card } from '../components/atoms/Card';
 import { Input } from '../components/atoms/Input';
 import { Button } from '../components/atoms/Button';
@@ -15,8 +15,6 @@ const Login = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
-  const [showOtpInput, setShowOtpInput] = useState(false);
   const [showForgotForm, setShowForgotForm] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
 
@@ -26,23 +24,7 @@ const Login = () => {
     if (loginUser.fulfilled.match(resultAction)) {
       navigate('/dashboard');
     } else {
-      const msg = resultAction.payload || 'Login failed';
-      if (msg.toLowerCase().includes('verify your email')) {
-        setShowOtpInput(true);
-        alert(msg);
-      } else {
-        alert(msg);
-      }
-    }
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    const resultAction = await dispatch(verifyEmail({ email, code: otp }));
-    if (verifyEmail.fulfilled.match(resultAction)) {
-      navigate('/dashboard');
-    } else {
-      alert(resultAction.payload || 'Verification failed. Please check the code.');
+      alert(resultAction.payload || 'Login failed');
     }
   };
 
@@ -66,7 +48,7 @@ const Login = () => {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <Card>
         <h2 className="text-2xl font-semibold mb-6 text-center">
-          {showForgotForm ? 'Reset Password' : showOtpInput ? 'Verify Your Email' : 'Sign In'}
+          {showForgotForm ? 'Reset Password' : 'Sign In'}
         </h2>
         
         {showForgotForm ? (
@@ -94,23 +76,6 @@ const Login = () => {
                 Back to Sign In
               </button>
             </div>
-          </form>
-        ) : showOtpInput ? (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <p className="text-sm text-slate-400 mb-4 text-center">
-              We've sent a new 6-digit verification code to <strong>{email}</strong>. Please enter it below.
-            </p>
-            <Input 
-              label="Verification Code" 
-              type="text" 
-              placeholder="123456" 
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              required 
-            />
-            <Button type="submit" className="w-full mt-6" disabled={loading}>
-              {loading ? 'Verifying...' : 'Verify & Sign In'}
-            </Button>
           </form>
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">

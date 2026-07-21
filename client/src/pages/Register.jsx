@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { registerUser, verifyEmail } from '../redux/slices/userSlice';
+import { registerUser } from '../redux/slices/userSlice';
 import { Card } from '../components/atoms/Card';
 import { Input } from '../components/atoms/Input';
 import { Button } from '../components/atoms/Button';
@@ -15,84 +15,51 @@ const Register = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
-  const [showOtpInput, setShowOtpInput] = useState(false);
 
   const handleRegister = async (e) => {
     e.preventDefault();
     const resultAction = await dispatch(registerUser({ fullName, email, password }));
     if (registerUser.fulfilled.match(resultAction)) {
-      setShowOtpInput(true);
-    } else {
-      alert(resultAction.payload || 'Registration failed');
-    }
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    const resultAction = await dispatch(verifyEmail({ email, code: otp }));
-    if (verifyEmail.fulfilled.match(resultAction)) {
       navigate('/dashboard');
     } else {
-      alert(resultAction.payload || 'Verification failed. Please check the code.');
+      alert(resultAction.payload || 'Registration failed');
     }
   };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <Card>
-        <h2 className="text-2xl font-semibold mb-6 text-center">
-          {showOtpInput ? 'Verify Your Email' : 'Create an Account'}
-        </h2>
+        <h2 className="text-2xl font-semibold mb-6 text-center">Create an Account</h2>
         
-        {showOtpInput ? (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <p className="text-sm text-slate-400 mb-4 text-center">
-              We've sent a 6-digit verification code to <strong>{email}</strong>. Please enter it below.
-            </p>
-            <Input 
-              label="Verification Code" 
-              type="text" 
-              placeholder="123456" 
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              required 
-            />
-            <Button type="submit" className="w-full mt-6" disabled={loading}>
-              {loading ? 'Verifying...' : 'Verify & Sign In'}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleRegister} className="space-y-4">
-            <Input 
-              label="Full Name" 
-              type="text" 
-              placeholder="Alex Developer" 
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required 
-            />
-            <Input 
-              label="Email" 
-              type="email" 
-              placeholder="alex@example.com" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required 
-            />
-            <Input 
-              label="Password" 
-              type="password" 
-              placeholder="••••••••" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required 
-            />
-            <Button type="submit" className="w-full mt-6" disabled={loading}>
-              {loading ? 'Signing Up...' : 'Sign Up'}
-            </Button>
-          </form>
-        )}
+        <form onSubmit={handleRegister} className="space-y-4">
+          <Input 
+            label="Full Name" 
+            type="text" 
+            placeholder="Alex Developer" 
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required 
+          />
+          <Input 
+            label="Email" 
+            type="email" 
+            placeholder="alex@example.com" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required 
+          />
+          <Input 
+            label="Password" 
+            type="password" 
+            placeholder="••••••••" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required 
+          />
+          <Button type="submit" className="w-full mt-6" disabled={loading}>
+            {loading ? 'Signing Up...' : 'Sign Up'}
+          </Button>
+        </form>
 
         <p className="mt-6 text-center text-sm text-slate-400">
           Already have an account?{' '}

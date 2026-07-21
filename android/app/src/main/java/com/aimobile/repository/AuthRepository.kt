@@ -34,25 +34,12 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    suspend fun register(fullName: String, email: String, password: String): AuthResult<com.aimobile.api.MessageResponse> {
+    suspend fun register(fullName: String, email: String, password: String): AuthResult<AuthResponse> {
         return try {
             val response = apiService.register(com.aimobile.api.RegisterRequest(fullName, email, password))
-            if (response.isSuccessful && response.body() != null) {
-                AuthResult.Success(response.body()!!)
-            } else {
-                AuthResult.Error(response.errorBody()?.string() ?: "Registration failed")
-            }
-        } catch (e: Exception) {
-            AuthResult.Error(e.message ?: "Network error. Check your connection.")
-        }
-    }
-
-    suspend fun verifyEmail(email: String, code: String): AuthResult<AuthResponse> {
-        return try {
-            val response = apiService.verifyEmail(com.aimobile.api.VerifyEmailRequest(email, code))
             handleAuthResponse(response)
         } catch (e: Exception) {
-            AuthResult.Error(e.message ?: "Verification failed. Check your network.")
+            AuthResult.Error(e.message ?: "Network error. Check your connection.")
         }
     }
 

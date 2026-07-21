@@ -73,10 +73,7 @@ interface ApiService {
 
     // Auth
     @POST("/api/auth/register")
-    suspend fun register(@Body request: RegisterRequest): Response<MessageResponse>
-
-    @POST("/api/auth/verify-email")
-    suspend fun verifyEmail(@Body request: VerifyEmailRequest): Response<AuthResponse>
+    suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
 
     @POST("/api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
