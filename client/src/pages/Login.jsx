@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import { getApiUrl } from '../config';
 import { loginUser, verifyEmail } from '../redux/slices/userSlice';
 import { Card } from '../components/atoms/Card';
 import { Input } from '../components/atoms/Input';
@@ -48,7 +49,7 @@ const Login = () => {
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/forgot-password`, {
+      const response = await fetch(`${getApiUrl()}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail }),

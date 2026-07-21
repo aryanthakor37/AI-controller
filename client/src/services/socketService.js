@@ -1,11 +1,12 @@
 import { io } from 'socket.io-client';
 import { store } from '../redux/store';
 import { setDevices, updateDeviceTelemetry } from '../redux/slices/deviceSlice';
+import { getSocketUrl } from '../config';
 
 class SocketService {
   constructor() {
     this.socket = null;
-    this.url = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    this.url = getSocketUrl();
   }
 
   connect() {

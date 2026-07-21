@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { getApiUrl } from '../../config';
 
 // Retrieve token/user from localStorage if available
 const user = JSON.parse(localStorage.getItem('user'));
@@ -14,7 +15,7 @@ const initialState = {
 
 export const loginUser = createAsyncThunk('auth/login', async (userData, thunkAPI) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/login`, {
+    const response = await fetch(`${getApiUrl()}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData),
@@ -31,7 +32,7 @@ export const loginUser = createAsyncThunk('auth/login', async (userData, thunkAP
 
 export const registerUser = createAsyncThunk('auth/register', async (userData, thunkAPI) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/register`, {
+    const response = await fetch(`${getApiUrl()}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(userData),
@@ -46,7 +47,7 @@ export const registerUser = createAsyncThunk('auth/register', async (userData, t
 
 export const verifyEmail = createAsyncThunk('auth/verifyEmail', async (verificationData, thunkAPI) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/verify-email`, {
+    const response = await fetch(`${getApiUrl()}/auth/verify-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(verificationData),

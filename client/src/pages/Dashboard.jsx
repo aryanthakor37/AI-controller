@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { getApiUrl } from '../config';
 import { motion } from 'framer-motion';
 import { Battery, HardDrive, Smartphone, Zap, Play, Wifi } from 'lucide-react';
 import { Card } from '../components/atoms/Card';
@@ -18,7 +19,7 @@ const Dashboard = () => {
     socketService.connect();
     
     // Fallback: Fetch active devices directly via HTTP to prevent Socket.IO race conditions on reload
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/device/list-active`)
+    fetch(`${getApiUrl()}/device/list-active`)
       .then(res => res.json())
       .then(data => {
         if (data && data.length > 0) {
@@ -29,7 +30,7 @@ const Dashboard = () => {
 
     // Fetch DB command execution history
     const token = localStorage.getItem('token');
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/history`, {
+    fetch(`${getApiUrl()}/history`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -39,7 +40,7 @@ const Dashboard = () => {
       .catch(console.error);
 
     // Fetch analytics metrics
-    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/analytics`, {
+    fetch(`${getApiUrl()}/analytics`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -83,7 +84,7 @@ const Dashboard = () => {
             onClick={async () => {
               try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('http://localhost:5000/api/device/generate-code', {
+                const res = await fetch(`${getApiUrl()}/device/generate-code`, {
                   headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
