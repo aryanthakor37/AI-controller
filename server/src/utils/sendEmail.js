@@ -9,12 +9,24 @@ const sendEmail = async ({ to, subject, html }) => {
   const pass = process.env.SMTP_PASS;
 
   if (host && user && pass) {
-    transporter = nodemailer.createTransport({
-      host,
-      port: parseInt(port) || 587,
-      secure: port === '465',
-      auth: { user, pass }
-    });
+    if (host === 'smtp.gmail.com' || host.includes('gmail')) {
+      // Use optimal built-in Gmail service settings
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user, pass },
+        connectionTimeout: 10000, // 10 seconds
+        socketTimeout: 10000
+      });
+    } else {
+      transporter = nodemailer.createTransport({
+        host,
+        port: parseInt(port) || 587,
+        secure: port === '465',
+        auth: { user, pass },
+        connectionTimeout: 10000,
+        socketTimeout: 10000
+      });
+    }
   } else {
     // Generate test SMTP service account from ethereal.email
     const testAccount = await nodemailer.createTestAccount();

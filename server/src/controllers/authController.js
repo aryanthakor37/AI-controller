@@ -45,24 +45,22 @@ const registerUser = async (req, res) => {
       verificationCodeExpires
     });
 
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Agent.AI Email Verification Code',
-        html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
-            <h2 style="color: #3b82f6;">Agent.AI Verification Code</h2>
-            <p>Welcome to Agent.AI! Please use the following code to verify your email address:</p>
-            <div style="font-size: 24px; font-weight: bold; background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 6px; letter-spacing: 5px; color: #1e3a8a;">
-              ${verificationCode}
-            </div>
-            <p style="margin-top: 20px; color: #555;">This code is valid for 30 minutes. If you did not request this, you can ignore this email.</p>
+    sendEmail({
+      to: user.email,
+      subject: 'Agent.AI Email Verification Code',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
+          <h2 style="color: #3b82f6;">Agent.AI Verification Code</h2>
+          <p>Welcome to Agent.AI! Please use the following code to verify your email address:</p>
+          <div style="font-size: 24px; font-weight: bold; background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 6px; letter-spacing: 5px; color: #1e3a8a;">
+            ${verificationCode}
           </div>
-        `
-      });
-    } catch (emailError) {
+          <p style="margin-top: 20px; color: #555;">This code is valid for 30 minutes. If you did not request this, you can ignore this email.</p>
+        </div>
+      `
+    }).catch(emailError => {
       console.error('Failed to send verification email:', emailError);
-    }
+    });
 
     res.status(201).json({
       message: 'Registration successful! Verification code sent to your email.',
@@ -188,24 +186,22 @@ const forgotPassword = async (req, res) => {
     await user.save();
     
     const resetUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Agent.AI Password Reset Request',
-        html: `
-          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
-            <h2 style="color: #3b82f6;">Reset Your Password</h2>
-            <p>You requested a password reset for your Agent.AI account. Click the button below to set a new password:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
-            </div>
-            <p style="color: #555;">This link is valid for 15 minutes. If you did not request this, you can ignore this email.</p>
+    sendEmail({
+      to: user.email,
+      subject: 'Agent.AI Password Reset Request',
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
+          <h2 style="color: #3b82f6;">Reset Your Password</h2>
+          <p>You requested a password reset for your Agent.AI account. Click the button below to set a new password:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Reset Password</a>
           </div>
-        `
-      });
-    } catch (emailError) {
+          <p style="color: #555;">This link is valid for 15 minutes. If you did not request this, you can ignore this email.</p>
+        </div>
+      `
+    }).catch(emailError => {
       console.error('Failed to send forgot-password email:', emailError);
-    }
+    });
 
     res.json({ message: 'Reset link sent.' });
   } catch (error) {
