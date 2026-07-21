@@ -122,7 +122,31 @@ const loginUser = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
     if (!user.isVerified) {
-      return res.status(403).json({ message: 'Please verify your email address first' });
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      user.verificationCode = verificationCode;
+      user.verificationCodeExpires = new Date(Date.now() + 30 * 60 * 1000);
+      await user.save();
+
+      sendEmail({
+        to: user.email,
+        subject: 'Agent.AI Email Verification Code',
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: #3b82f6;">Agent.AI Verification Code</h2>
+            <p>Welcome back! Please use the following code to verify your email address and complete login:</p>
+            <div style="font-size: 24px; font-weight: bold; background-color: #f3f4f6; padding: 15px; text-align: center; border-radius: 6px; letter-spacing: 5px; color: #1e3a8a;">
+              ${verificationCode}
+            </div>
+            <p style="margin-top: 20px; color: #555;">This code is valid for 30 minutes.</p>
+          </div>
+        `
+      }).catch(emailError => {
+        console.error('Failed to send verification email:', emailError);
+      });
+
+      return res.status(403).json({ 
+        message: 'Please verify your email address first. We have sent a new verification code to your email.' 
+      });
     }
     const accessToken = generateAccessToken(user._id);
     const refreshToken = await generateRefreshToken(user._id);
