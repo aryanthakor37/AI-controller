@@ -16,6 +16,8 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
+  const [showForgotForm, setShowForgotForm] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -43,14 +45,56 @@ const Login = () => {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      const data = await response.json();
+      alert(data.message || 'Reset link sent if email exists.');
+      setShowForgotForm(false);
+    } catch (err) {
+      alert('Failed to send reset link.');
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <Card>
         <h2 className="text-2xl font-semibold mb-6 text-center">
-          {showOtpInput ? 'Verify Your Email' : 'Sign In'}
+          {showForgotForm ? 'Reset Password' : showOtpInput ? 'Verify Your Email' : 'Sign In'}
         </h2>
         
-        {showOtpInput ? (
+        {showForgotForm ? (
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <p className="text-sm text-slate-400 mb-4 text-center">
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
+            <Input 
+              label="Email Address" 
+              type="email" 
+              placeholder="alex@example.com" 
+              value={forgotEmail}
+              onChange={(e) => setForgotEmail(e.target.value)}
+              required 
+            />
+            <Button type="submit" className="w-full mt-6">
+              Send Reset Link
+            </Button>
+            <div className="text-center mt-4">
+              <button 
+                type="button" 
+                onClick={() => setShowForgotForm(false)} 
+                className="text-sm text-primary hover:text-blue-400 transition-colors"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          </form>
+        ) : showOtpInput ? (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <p className="text-sm text-slate-400 mb-4 text-center">
               We've sent a new 6-digit verification code to <strong>{email}</strong>. Please enter it below.
@@ -91,7 +135,13 @@ const Login = () => {
                 <input type="checkbox" className="mr-2 rounded border-white/10 bg-surface/50 text-primary focus:ring-primary/50" />
                 Remember me
               </label>
-              <a href="#" className="text-primary hover:text-blue-400 transition-colors">Forgot Password?</a>
+              <button 
+                type="button" 
+                onClick={() => setShowForgotForm(true)} 
+                className="text-primary hover:text-blue-400 transition-colors"
+              >
+                Forgot Password?
+              </button>
             </div>
 
             <Button type="submit" className="w-full mt-6" disabled={loading}>
