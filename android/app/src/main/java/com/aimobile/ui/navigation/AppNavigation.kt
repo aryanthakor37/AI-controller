@@ -62,7 +62,6 @@ fun AppNavigation() {
 
         composable("forgot_password") {
             ForgotPasswordScreen(
-                onResetRequested = { navController.popBackStack() },
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -95,6 +95,19 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun forgotPassword(email: String): AuthResult<com.aimobile.api.MessageResponse> {
+        return try {
+            val response = apiService.forgotPassword(com.aimobile.api.ForgotPasswordRequest(email))
+            if (response.isSuccessful && response.body() != null) {
+                AuthResult.Success(response.body()!!)
+            } else {
+                AuthResult.Error(response.errorBody()?.string() ?: "Failed to send reset link")
+            }
+        } catch (e: Exception) {
+            AuthResult.Error(e.message ?: "Network error")
+        }
+    }
+
     fun isLoggedIn(): Boolean = tokenManager.isLoggedIn()
 
     private fun handleAuthResponse(response: Response<AuthResponse>): AuthResult<AuthResponse> {
