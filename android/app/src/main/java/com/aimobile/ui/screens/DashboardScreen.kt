@@ -21,11 +21,16 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,6 +61,11 @@ fun DashboardScreen(
     val deviceStatus by viewModel.deviceStatus.collectAsState()
     val context = LocalContext.current
     var actionFeedback by remember { mutableStateOf<String?>(null) }
+
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var routineName by remember { mutableStateOf("") }
+    var routineTrigger by remember { mutableStateOf("") }
+    var routineCommandsText by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -305,6 +315,257 @@ fun DashboardScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        // Routines Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "AI Routines (Macros)",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+            IconButton(
+                onClick = { showCreateDialog = true },
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(PrimaryBlue.copy(alpha = 0.2f))
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = "Create Routine",
+                    tint = PrimaryBlue,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Routines list
+        val routines by viewModel.routines.collectAsState()
+        if (routines.isEmpty()) {
+            Text(
+                text = "No routines configured yet.",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 13.sp
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                routines.forEach { routine ->
+                    RoutineCard(
+                        routine = routine,
+                        onRun = {
+                            viewModel.runRoutineDirectly(routine) { feedback ->
+                                actionFeedback = feedback
+                            }
+                        },
+                        onDelete = {
+                            viewModel.deleteRoutine(routine.trigger)
+                            actionFeedback = "🗑️ Routine deleted!"
+                        }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    if (showCreateDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateDialog = false },
+            title = {
+                Text(
+                    text = "Create Custom Routine",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = routineName,
+                        onValueChange = { routineName = it },
+                        label = { Text("Routine Name (e.g. Work Mode)", color = Color.Gray) },
+                        singleLine = true,
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = Color.Gray,
+                            focusedLabelColor = PrimaryBlue,
+                            unfocusedLabelColor = Color.Gray
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = routineTrigger,
+                        onValueChange = { routineTrigger = it },
+                        label = { Text("Trigger word (e.g. work time)", color = Color.Gray) },
+                        singleLine = true,
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = Color.Gray,
+                            focusedLabelColor = PrimaryBlue,
+                            unfocusedLabelColor = Color.Gray
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = routineCommandsText,
+                        onValueChange = { routineCommandsText = it },
+                        label = { Text("Commands (comma separated)", color = Color.Gray) },
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = PrimaryBlue,
+                            unfocusedBorderColor = Color.Gray,
+                            focusedLabelColor = PrimaryBlue,
+                            unfocusedLabelColor = Color.Gray
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (routineName.isNotBlank() && routineTrigger.isNotBlank() && routineCommandsText.isNotBlank()) {
+                            val cmds = routineCommandsText.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                            viewModel.addCustomRoutine(routineName, routineTrigger, cmds)
+                            actionFeedback = "✅ Custom routine \"$routineName\" added!"
+                            showCreateDialog = false
+                            routineName = ""
+                            routineTrigger = ""
+                            routineCommandsText = ""
+                        }
+                    }
+                ) {
+                    Text("Save", color = PrimaryBlue, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateDialog = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            },
+            containerColor = SurfaceDark,
+            tonalElevation = 6.dp
+        )
+    }
+}
+
+@Composable
+fun RoutineCard(
+    routine: com.aimobile.utils.Routine,
+    onRun: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = false,
+                ambientColor = Color.Black,
+                spotColor = PrimaryBlue
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .background(SurfaceDark)
+            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = routine.name,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Trigger: \"${routine.trigger}\"",
+                        color = PrimaryBlue,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp
+                    )
+                }
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onRun,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryBlue.copy(alpha = 0.2f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = "Run Routine",
+                            tint = PrimaryBlue,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.Red.copy(alpha = 0.15f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Delete Routine",
+                            tint = Color.Red,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Steps:",
+                color = Color.White.copy(alpha = 0.6f),
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            routine.commands.forEachIndexed { index, cmd ->
+                Row(
+                    modifier = Modifier.padding(start = 8.dp, bottom = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${index + 1}. ",
+                        color = PrimaryBlue,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = cmd,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
     }
 }
 

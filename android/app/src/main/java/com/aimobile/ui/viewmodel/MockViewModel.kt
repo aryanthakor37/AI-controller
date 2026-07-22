@@ -62,6 +62,36 @@ class MockViewModel @Inject constructor(
     private val tokenManager = TokenManager(context)
     private val gson = Gson()
 
+    private val _routines = MutableStateFlow<List<com.aimobile.utils.Routine>>(tokenManager.getRoutines())
+    val routines: StateFlow<List<com.aimobile.utils.Routine>> = _routines.asStateFlow()
+
+    fun addCustomRoutine(name: String, trigger: String, commands: List<String>) {
+        val currentList = _routines.value.toMutableList()
+        currentList.removeAll { it.trigger.lowercase().trim() == trigger.lowercase().trim() }
+        currentList.add(com.aimobile.utils.Routine(name, trigger, commands))
+        tokenManager.saveRoutines(currentList)
+        _routines.value = currentList
+    }
+
+    fun deleteRoutine(trigger: String) {
+        val currentList = _routines.value.toMutableList()
+        currentList.removeAll { it.trigger.lowercase().trim() == trigger.lowercase().trim() }
+        tokenManager.saveRoutines(currentList)
+        _routines.value = currentList
+    }
+
+    fun runRoutineDirectly(routine: com.aimobile.utils.Routine, onFeedback: (String) -> Unit) {
+        viewModelScope.launch {
+            onFeedback("⚡ Starting Routine: ${routine.name}...")
+            for (command in routine.commands) {
+                onFeedback("⏳ Executing: \"$command\"")
+                executeSingleCommand(command)
+                kotlinx.coroutines.delay(2000)
+            }
+            onFeedback("✅ Routine \"${routine.name}\" completed!")
+        }
+    }
+
     // Load real user name from saved profile
     private val _user = MutableStateFlow(loadUser())
     val user: StateFlow<MockUser> = _user.asStateFlow()
@@ -144,6 +174,40 @@ class MockViewModel @Inject constructor(
 
     private val intentRouter = com.aimobile.router.IntentRouter(context)
 
+    private suspend fun executeSingleCommand(cmdText: String): String {
+        return try {
+            val response = apiService.sendChat(ChatRequest(command = cmdText))
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                val data = body.data
+                when {
+                    data == null -> "Sorry, I couldn't understand that."
+                    data.reply != null && data.reply.isNotBlank() -> data.reply
+                    data.intent == "UNKNOWN_COMMAND" ->
+                        "I didn't understand that command. Try something like:\n• 'Open camera'\n• 'Turn on flashlight'\n• 'Set alarm for 7am'\n• 'What's the battery level?'"
+                    data.intent != null -> {
+                        val request = com.aimobile.models.CommandRequest(
+                            intent = data.intent,
+                            number = data.number ?: data.contact,
+                            time = data.time,
+                            duration = data.duration?.toIntOrNull(),
+                            query = data.query,
+                            message = data.message ?: data.app ?: data.contact,
+                            app = data.app
+                        )
+                        intentRouter.route(request)
+                        "✅ Command executed: ${data.intent.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }}"
+                    }
+                    else -> "I didn't understand that. Please try again."
+                }
+            } else {
+                executeOfflineFallback(cmdText)
+            }
+        } catch (e: Exception) {
+            executeOfflineFallback(cmdText)
+        }
+    }
+
     fun sendMessage(text: String) {
         val userMsg = MockChatMessage(
             id = System.currentTimeMillis().toString(),
@@ -152,53 +216,57 @@ class MockViewModel @Inject constructor(
             time = "Now"
         )
         _chatMessages.value = _chatMessages.value + userMsg
-        _isChatLoading.value = true
 
-        viewModelScope.launch {
-            try {
-                val response = apiService.sendChat(ChatRequest(command = text))
-                val aiText = if (response.isSuccessful && response.body() != null) {
-                    val body = response.body()!!
-                    val data = body.data
-                    when {
-                        data == null -> "Sorry, I couldn't understand that."
-                        data.reply != null && data.reply.isNotBlank() -> data.reply
-                        data.intent == "UNKNOWN_COMMAND" ->
-                            "I didn't understand that command. Try something like:\n• 'Open camera'\n• 'Turn on flashlight'\n• 'Set alarm for 7am'\n• 'What's the battery level?'"
-                        data.intent != null -> {
-                            // Route the successful command locally as well to make it work from Chat screen!
-                            val request = com.aimobile.models.CommandRequest(
-                                intent = data.intent,
-                                number = data.number ?: data.contact,
-                                time = data.time,
-                                duration = data.duration?.toIntOrNull(),
-                                query = data.query,
-                                message = data.message ?: data.app ?: data.contact,
-                                app = data.app
-                            )
-                            intentRouter.route(request)
-                            "✅ Command sent & executed: ${data.intent.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }}"
-                        }
-                        else -> "I didn't understand that. Please try again."
-                    }
-                } else {
-                    executeOfflineFallback(text)
+        val cleanText = text.lowercase().trim()
+        val matchedRoutine = _routines.value.firstOrNull { it.trigger.lowercase().trim() == cleanText }
+
+        if (matchedRoutine != null) {
+            _isChatLoading.value = true
+            viewModelScope.launch {
+                _chatMessages.value = _chatMessages.value + MockChatMessage(
+                    id = System.currentTimeMillis().toString(),
+                    text = "⚡ Running Routine: ${matchedRoutine.name}...",
+                    isUser = false,
+                    time = "Now"
+                )
+
+                for (command in matchedRoutine.commands) {
+                    kotlinx.coroutines.delay(1000)
+                    _chatMessages.value = _chatMessages.value + MockChatMessage(
+                        id = System.currentTimeMillis().toString(),
+                        text = "⏳ Action: \"$command\"",
+                        isUser = false,
+                        time = "Now"
+                    )
+
+                    val resultText = executeSingleCommand(command)
+
+                    _chatMessages.value = _chatMessages.value + MockChatMessage(
+                        id = System.currentTimeMillis().toString(),
+                        text = resultText,
+                        isUser = false,
+                        time = "Now"
+                    )
                 }
+
                 _chatMessages.value = _chatMessages.value + MockChatMessage(
-                    id = (System.currentTimeMillis() + 1).toString(),
-                    text = aiText,
+                    id = System.currentTimeMillis().toString(),
+                    text = "✅ Routine \"${matchedRoutine.name}\" completed successfully!",
                     isUser = false,
                     time = "Now"
                 )
-            } catch (e: Exception) {
-                val fallbackText = executeOfflineFallback(text)
+                _isChatLoading.value = false
+            }
+        } else {
+            _isChatLoading.value = true
+            viewModelScope.launch {
+                val resultText = executeSingleCommand(text)
                 _chatMessages.value = _chatMessages.value + MockChatMessage(
-                    id = (System.currentTimeMillis() + 1).toString(),
-                    text = fallbackText,
+                    id = System.currentTimeMillis().toString(),
+                    text = resultText,
                     isUser = false,
                     time = "Now"
                 )
-            } finally {
                 _isChatLoading.value = false
             }
         }
