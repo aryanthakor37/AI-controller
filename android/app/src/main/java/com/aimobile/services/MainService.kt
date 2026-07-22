@@ -31,12 +31,23 @@ class MainService : Service() {
         return null
     }
 
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
+
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Acquire WakeLock to keep CPU alive when screen is locked/off
+        val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        wakeLock = powerManager.newWakeLock(
+            android.os.PowerManager.PARTIAL_WAKE_LOCK,
+            "AiMobileControl::BackgroundWakeLock"
+        ).apply {
+            acquire()
+        }
+
         // Start Foreground Service with persistent notification
         val notification = createNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -55,6 +66,11 @@ class MainService : Service() {
     }
 
     override fun onDestroy() {
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
         super.onDestroy()
         connectionManager.disconnect()
     }

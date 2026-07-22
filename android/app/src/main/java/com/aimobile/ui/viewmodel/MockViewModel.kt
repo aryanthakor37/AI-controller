@@ -219,7 +219,7 @@ class MockViewModel @Inject constructor(
                 val startIndex = if (searchIndex != -1) searchIndex + 7 else playIndex + 5
                 
                 val rawQuery = clean.substring(startIndex).trim()
-                val appKeywords = listOf("youtube", "spotify", "maps", "map", "chrome", "google", "browser", "instagram")
+                val appKeywords = listOf("youtube", "spotify", "maps", "map", "chrome", "google", "browser", "instagram", "play store", "playstore", "store", "telegram")
                 var detectedApp: String? = null
                 var finalQuery = rawQuery
 
@@ -238,6 +238,8 @@ class MockViewModel @Inject constructor(
                         clean.contains("map") || clean.contains("maps") -> "Maps"
                         clean.contains("chrome") || clean.contains("browser") -> "Chrome"
                         clean.contains("instagram") -> "Instagram"
+                        clean.contains("play store") || clean.contains("playstore") || clean.contains("store") -> "Play Store"
+                        clean.contains("telegram") -> "Telegram"
                         else -> "YouTube"
                     }
                 }
@@ -414,4 +416,7 @@ class MockViewModel @Inject constructor(
 
     fun getServerUrl(): String = tokenManager.getServerUrl()
     fun saveServerUrl(url: String) = tokenManager.saveServerUrl(url)
+
+    fun isOverlayEnabled(): Boolean = tokenManager.isOverlayEnabled()
+    fun saveOverlayEnabled(enabled: Boolean) = tokenManager.saveOverlayEnabled(enabled)
 }

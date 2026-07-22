@@ -1,5 +1,6 @@
 package com.aimobile.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
@@ -36,6 +37,12 @@ fun SettingsScreen(
     onNavigateToAnalytics: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    var darkTheme by remember { mutableStateOf(true) }
+    var pushNotifications by remember { mutableStateOf(true) }
+    var developerMode by remember { mutableStateOf(false) }
+    var overlayEnabled by remember { mutableStateOf(viewModel.isOverlayEnabled()) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -46,11 +53,49 @@ fun SettingsScreen(
 
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                SettingToggleRow(title = "Dark Theme", defaultChecked = true)
+                SettingToggleRow(title = "Dark Theme", checked = darkTheme, onCheckedChange = { darkTheme = it })
                 Spacer(modifier = Modifier.height(16.dp))
-                SettingToggleRow(title = "Push Notifications", defaultChecked = true)
+                SettingToggleRow(title = "Push Notifications", checked = pushNotifications, onCheckedChange = { pushNotifications = it })
                 Spacer(modifier = Modifier.height(16.dp))
-                SettingToggleRow(title = "Developer Mode", defaultChecked = false)
+                SettingToggleRow(title = "Developer Mode", checked = developerMode, onCheckedChange = { developerMode = it })
+                Spacer(modifier = Modifier.height(16.dp))
+                SettingToggleRow(
+                    title = "Floating Controls Overlay",
+                    checked = overlayEnabled,
+                    onCheckedChange = { isChecked ->
+                        overlayEnabled = isChecked
+                        viewModel.saveOverlayEnabled(isChecked)
+                        
+                        val overlayIntent = Intent(context, com.aimobile.services.FloatingOverlayService::class.java)
+                        if (isChecked) {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && 
+                                !android.provider.Settings.canDrawOverlays(context)) {
+                                Toast.makeText(context, "Please grant Overlay permission to enable", Toast.LENGTH_LONG).show()
+                                try {
+                                    val intent = Intent(
+                                        android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        android.net.Uri.parse("package:${context.packageName}")
+                                    )
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("SettingsScreen", "Failed to start overlay settings: ${e.message}")
+                                }
+                            } else {
+                                try {
+                                    context.startService(overlayIntent)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("SettingsScreen", "Failed to start FloatingOverlayService: ${e.message}")
+                                }
+                            }
+                        } else {
+                            try {
+                                context.stopService(overlayIntent)
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+                    }
+                )
             }
         }
 
@@ -64,7 +109,6 @@ fun SettingsScreen(
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        val context = LocalContext.current
         var serverUrl by remember { mutableStateOf(viewModel.getServerUrl()) }
 
         GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -137,8 +181,7 @@ fun SettingsScreen(
 }
 
 @Composable
-fun SettingToggleRow(title: String, defaultChecked: Boolean) {
-    var checked by remember { mutableStateOf(defaultChecked) }
+fun SettingToggleRow(title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -147,7 +190,7 @@ fun SettingToggleRow(title: String, defaultChecked: Boolean) {
         Text(text = title, color = Color.White, fontSize = 16.sp)
         Switch(
             checked = checked,
-            onCheckedChange = { checked = it },
+            onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = PrimaryBlue

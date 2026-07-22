@@ -46,7 +46,13 @@ class MyAccessibilityService : AccessibilityService() {
         private val _isServiceEnabled = MutableStateFlow(false)
         val isServiceEnabled: StateFlow<Boolean> = _isServiceEnabled.asStateFlow()
 
-        var currentActivePackage: String = ""
-            private set
+        private val _currentActivePackageFlow = MutableStateFlow("")
+        val currentActivePackageFlow = _currentActivePackageFlow.asStateFlow()
+
+        var currentActivePackage: String
+            get() = _currentActivePackageFlow.value
+            set(value) {
+                _currentActivePackageFlow.value = value
+            }
     }
 }

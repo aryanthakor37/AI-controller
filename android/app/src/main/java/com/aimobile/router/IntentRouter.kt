@@ -132,7 +132,7 @@ class IntentRouter(private val context: Context) {
                         com.aimobile.accessibility.automation.AppAutomations.runChromeAutomation(null, context, query)
                     } else if (appName.equals("Maps", ignoreCase = true) || appName.equals("Google Maps", ignoreCase = true) || packageName?.contains("apps.maps") == true) {
                         try {
-                            val mapUri = android.net.Uri.parse("geo:0,0?q=" + android.net.Uri.encode(query))
+                            val mapUri = android.net.Uri.parse("https://www.google.com/maps/search/?api=1&query=" + android.net.Uri.encode(query))
                             val mapIntent = Intent(Intent.ACTION_VIEW, mapUri).apply {
                                 setPackage("com.google.android.apps.maps")
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -141,6 +141,30 @@ class IntentRouter(private val context: Context) {
                             CommandResult("Success", "Searching Maps for: $query")
                         } catch (e: Exception) {
                             CommandResult("Failed", "Maps search error: ${e.message}")
+                        }
+                    } else if (appName.equals("Play Store", ignoreCase = true) || appName.equals("PlayStore", ignoreCase = true) || appName.equals("Google Play Store", ignoreCase = true) || packageName?.contains("vending") == true) {
+                        try {
+                            val playUri = android.net.Uri.parse("market://search?q=" + android.net.Uri.encode(query))
+                            val playIntent = Intent(Intent.ACTION_VIEW, playUri).apply {
+                                setPackage("com.android.vending")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(playIntent)
+                            CommandResult("Success", "Searching Play Store for: $query")
+                        } catch (e: Exception) {
+                            CommandResult("Failed", "Play Store search error: ${e.message}")
+                        }
+                    } else if (appName.equals("Telegram", ignoreCase = true) || appName.equals("telegram", ignoreCase = true) || packageName?.contains("telegram") == true) {
+                        try {
+                            val teleUri = android.net.Uri.parse("tg://search?query=" + android.net.Uri.encode(query))
+                            val teleIntent = Intent(Intent.ACTION_VIEW, teleUri).apply {
+                                setPackage(packageName ?: "org.telegram.messenger")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(teleIntent)
+                            CommandResult("Success", "Searching Telegram for: $query")
+                        } catch (e: Exception) {
+                            CommandResult("Failed", "Telegram search error: ${e.message}")
                         }
                     } else if (packageName != null) {
                         val service = com.aimobile.accessibility.MyAccessibilityService.instance

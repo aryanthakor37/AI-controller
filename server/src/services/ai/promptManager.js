@@ -59,6 +59,15 @@ User: "Play Believer on Spotify"
 User: "Search react tutorial in Chrome"
 {"intent": "SEARCH_APP", "app": "Chrome", "query": "react tutorial", "confidence": 0.98}
 
+User: "Search pizza on Maps"
+{"intent": "SEARCH_APP", "app": "Maps", "query": "pizza", "confidence": 0.99}
+
+User: "search minecraft in Play Store"
+{"intent": "SEARCH_APP", "app": "Play Store", "query": "minecraft", "confidence": 0.99}
+
+User: "Search Pritesh on Telegram"
+{"intent": "SEARCH_APP", "app": "Telegram", "query": "Pritesh", "confidence": 0.99}
+
 User: "Search virat kohli on Instagram"
 {"intent": "SEARCH_APP", "app": "Instagram", "query": "virat kohli", "confidence": 0.99}
 

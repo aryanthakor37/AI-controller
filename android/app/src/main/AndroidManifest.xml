@@ -33,6 +33,9 @@
 
     <!-- Alarms & Timers -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    
+    <!-- Overlay drawing -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <queries>
         <package android:name="com.google.android.youtube" />
@@ -69,6 +72,10 @@
             android:name=".services.MainService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name=".services.FloatingOverlayService"
+            android:exported="false" />
 
         <service
             android:name=".accessibility.MyAccessibilityService"

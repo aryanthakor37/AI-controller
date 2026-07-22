@@ -42,6 +42,35 @@ class MainActivity : ComponentActivity() {
         // Start persistent foreground service if user is logged in / paired
         val tokenManager = com.aimobile.utils.TokenManager(this)
         if (tokenManager.getToken() != null) {
+            // Check display over other apps overlay permission if enabled
+            if (tokenManager.isOverlayEnabled()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(this)) {
+                    try {
+                        val intent = Intent(
+                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:$packageName")
+                        )
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainActivity", "Failed to request overlay permission: ${e.message}")
+                    }
+                } else {
+                    val overlayIntent = Intent(this, com.aimobile.services.FloatingOverlayService::class.java)
+                    try {
+                        startService(overlayIntent)
+                    } catch (e: Exception) {
+                        android.util.Log.e("MainActivity", "Failed to start FloatingOverlayService: ${e.message}")
+                    }
+                }
+            } else {
+                val overlayIntent = Intent(this, com.aimobile.services.FloatingOverlayService::class.java)
+                try {
+                    stopService(overlayIntent)
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
+
             val serviceIntent = Intent(this, com.aimobile.services.MainService::class.java)
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

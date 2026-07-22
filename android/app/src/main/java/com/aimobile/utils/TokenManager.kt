@@ -28,6 +28,10 @@ class TokenManager(context: Context) {
     // Server URL configuration
     fun saveServerUrl(url: String) = prefs.edit().putString("server_url", url).apply()
     
+    // Floating Overlay Widget configuration
+    fun saveOverlayEnabled(enabled: Boolean) = prefs.edit().putBoolean("overlay_enabled", enabled).apply()
+    fun isOverlayEnabled(): Boolean = prefs.getBoolean("overlay_enabled", false)
+    
     fun getServerUrl(): String {
         val rawUrl = prefs.getString("server_url", "https://aimobile-backend.onrender.com/") ?: "https://aimobile-backend.onrender.com/"
         var clean = rawUrl.trim()
