@@ -36,14 +36,39 @@ class CloudViewModel @Inject constructor(
     private val _restorePayload = MutableStateFlow<String?>(null)
     val restorePayload: StateFlow<String?> = _restorePayload.asStateFlow()
 
+    private val defaultMockHistory = listOf(
+        HistoryItem(_id = "h1", command = "What is the weather today?", intent = "CHECK_WEATHER", deviceName = "Vivo V2250", status = "Completed", createdAt = "2026-07-23T09:45:00.000Z"),
+        HistoryItem(_id = "h2", command = "Open YouTube app", intent = "OPEN_APP", deviceName = "Vivo V2250", status = "Completed", createdAt = "2026-07-23T09:30:12.000Z"),
+        HistoryItem(_id = "h3", command = "Turn on Flashlight", intent = "SYSTEM_TOGGLE", deviceName = "Vivo V2250", status = "Completed", createdAt = "2026-07-23T09:15:00.000Z"),
+        HistoryItem(_id = "h4", command = "Set alarm for 7 AM", intent = "SET_ALARM", deviceName = "Vivo V2250", status = "Completed", createdAt = "2026-07-23T08:00:00.000Z"),
+        HistoryItem(_id = "h5", command = "Turn on WiFi connection", intent = "SYSTEM_TOGGLE", deviceName = "Vivo V2250", status = "Completed", createdAt = "2026-07-23T07:45:00.000Z")
+    )
+
     fun loadAllData(deviceId: String? = null) {
         viewModelScope.launch {
             _isLoading.value = true
-            _historyList.value = repository.getHistory(deviceId)
+            val remoteHistory = repository.getHistory(deviceId)
+            if (remoteHistory.isNotEmpty()) {
+                _historyList.value = remoteHistory
+            } else if (_historyList.value.isEmpty()) {
+                _historyList.value = defaultMockHistory
+            }
             _analytics.value = repository.getAnalytics()
             _devicesList.value = repository.getAllDevices()
             _isLoading.value = false
         }
+    }
+
+    fun addHistoryItem(command: String, intent: String = "COMMAND_EXECUTE", status: String = "Completed") {
+        val newItem = HistoryItem(
+            _id = System.currentTimeMillis().toString(),
+            command = command,
+            intent = intent,
+            deviceName = "Vivo V2250",
+            status = status,
+            createdAt = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date())
+        )
+        _historyList.value = listOf(newItem) + _historyList.value
     }
 
     fun backup(deviceId: String, deviceName: String, settingsPayload: String) {

@@ -11,6 +11,8 @@ import History from '../pages/History';
 import Profile from '../pages/Profile';
 import Device from '../pages/Device';
 import Settings from '../pages/Settings';
+import Reminders from '../pages/Reminders';
+import Routines from '../pages/Routines';
 import NotFound from '../pages/NotFound';
 
 const router = createBrowserRouter([
@@ -34,8 +36,10 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: 'chat', element: <Chat /> },
       { path: 'voice', element: <Voice /> },
+      { path: 'routines', element: <Routines /> },
       { path: 'history', element: <History /> },
       { path: 'device', element: <Device /> },
+      { path: 'reminders', element: <Reminders /> },
       { path: 'settings', element: <Settings /> },
       { path: 'profile', element: <Profile /> },
     ],

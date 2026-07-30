@@ -26,5 +26,26 @@ data class CommandRequest(
     val message: String? = null,
     
     @SerializedName("app")
-    val app: String? = null
+    val app: String? = null,
+
+    @SerializedName("origin")
+    val origin: String? = null,
+
+    @SerializedName("destination")
+    val destination: String? = null,
+
+    @SerializedName("title")
+    val title: String? = null,
+
+    @SerializedName("date")
+    val date: String? = null,
+
+    @SerializedName("repeat")
+    val repeat: String? = null,
+
+    @SerializedName("contact")
+    val contact: String? = null,
+
+    @SerializedName("steps")
+    val steps: List<com.aimobile.data.local.MacroStep>? = null
 )

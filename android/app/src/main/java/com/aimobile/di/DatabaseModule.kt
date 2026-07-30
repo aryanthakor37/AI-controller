@@ -2,7 +2,9 @@ package com.aimobile.di
 
 import android.content.Context
 import androidx.room.Room
+import com.aimobile.data.local.AppDao
 import com.aimobile.data.local.AppDatabase
+import com.aimobile.data.local.MacroDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,6 +23,20 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "aimobile_database"
-        ).build()
+        )
+        .fallbackToDestructiveMigration()
+        .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideAppDao(db: AppDatabase): AppDao {
+        return db.appDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMacroDao(db: AppDatabase): MacroDao {
+        return db.macroDao()
     }
 }

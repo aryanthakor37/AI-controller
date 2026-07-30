@@ -49,6 +49,11 @@ android {
     }
 }
 
+kapt {
+    correctErrorTypes = true
+    includeCompileClasspath = false
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
@@ -58,7 +63,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
     implementation("androidx.navigation:navigation-compose:2.7.5")
     
     // Hilt

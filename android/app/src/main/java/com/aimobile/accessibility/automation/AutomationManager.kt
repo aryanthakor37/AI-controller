@@ -170,4 +170,110 @@ object AutomationManager {
 
         return service.dispatchGesture(gesture, null, null)
     }
+
+    fun performHorizontalScrollGesture(service: AccessibilityService, isScrollRight: Boolean): Boolean {
+        val path = Path().apply {
+            if (isScrollRight) {
+                moveTo(800f, 1000f)
+                lineTo(200f, 1000f) // swipe left to view content on right
+            } else {
+                moveTo(200f, 1000f)
+                lineTo(800f, 1000f)
+            }
+        }
+        val gesture = GestureDescription.Builder().apply {
+            addStroke(GestureDescription.StrokeDescription(path, 0, 400))
+        }.build()
+
+        return service.dispatchGesture(gesture, null, null)
+    }
+
+    fun performTap(service: AccessibilityService, x: Float, y: Float): Boolean {
+        val path = android.graphics.Path().apply {
+            moveTo(x, y)
+        }
+        val gesture = android.accessibilityservice.GestureDescription.Builder().apply {
+            addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 50))
+        }.build()
+        return service.dispatchGesture(gesture, null, null)
+    }
+
+    suspend fun toggleSwitch(service: AccessibilityService, targetState: Boolean? = null, retryCount: Int = 3, targetKeyword: String? = null): Boolean {
+        addLog("Trying to auto-toggle switch to state: $targetState for keyword: $targetKeyword")
+        for (i in 0 until retryCount) {
+            val rootNode = service.rootInActiveWindow ?: continue
+            val switchNodes = mutableListOf<AccessibilityNodeInfo>()
+            findSwitchNodes(rootNode, switchNodes)
+            
+            // Filter by keyword if provided (e.g. "dark")
+            val targetNodes = if (targetKeyword != null) {
+                switchNodes.filter { 
+                    (it.text?.toString() ?: it.contentDescription?.toString() ?: "").contains(targetKeyword, ignoreCase = true) ||
+                    (it.parent?.text?.toString() ?: it.parent?.contentDescription?.toString() ?: "").contains(targetKeyword, ignoreCase = true)
+                }
+            } else {
+                switchNodes
+            }
+
+            if (targetNodes.isNotEmpty()) {
+                val node = targetNodes[0]
+                var currentState = node.isChecked
+                val nodeText = (node.text?.toString() ?: node.contentDescription?.toString() ?: "").lowercase()
+                if (nodeText.contains("on") || nodeText.contains("connected")) {
+                    currentState = true
+                } else if (nodeText.contains("off") || nodeText.contains("disconnected")) {
+                    currentState = false
+                }
+
+                if (targetState == null || currentState != targetState) {
+                    val clicked = performClick(node)
+                    if (clicked) {
+                        addLog("Successfully clicked switch!")
+                        return true
+                    }
+                } else {
+                    addLog("Switch is already in desired state: $targetState")
+                    return true
+                }
+            }
+            delay(800)
+        }
+        addLog("Could not find or click switch node")
+        return false
+    }
+
+    private fun findSwitchNodes(root: AccessibilityNodeInfo?, result: MutableList<AccessibilityNodeInfo>) {
+        if (root == null) return
+        val className = root.className?.toString() ?: ""
+        if (className.contains("Switch", ignoreCase = true) || className.contains("ToggleButton", ignoreCase = true) || root.isCheckable) {
+            result.add(root)
+        }
+        for (i in 0 until root.childCount) {
+            findSwitchNodes(root.getChild(i), result)
+        }
+    }
+
+    fun getAllTextFromScreen(service: AccessibilityService): String {
+        val rootNode = service.rootInActiveWindow ?: return ""
+        val stringBuilder = java.lang.StringBuilder()
+        extractTextRecursively(rootNode, stringBuilder)
+        return stringBuilder.toString().trim()
+    }
+
+    private fun extractTextRecursively(node: AccessibilityNodeInfo?, sb: java.lang.StringBuilder) {
+        if (node == null) return
+        
+        val text = node.text?.toString()?.trim()
+        val contentDesc = node.contentDescription?.toString()?.trim()
+        
+        if (!text.isNullOrEmpty()) {
+            sb.append(text).append("\n")
+        } else if (!contentDesc.isNullOrEmpty()) {
+            sb.append(contentDesc).append("\n")
+        }
+
+        for (i in 0 until node.childCount) {
+            extractTextRecursively(node.getChild(i), sb)
+        }
+    }
 }

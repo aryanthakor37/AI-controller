@@ -2,7 +2,7 @@
 const sessions = new Map();
 
 // Max messages to keep in context per session
-const MAX_HISTORY = 10;
+const MAX_HISTORY = 20;
 
 const getContext = (sessionId) => {
   if (!sessions.has(sessionId)) {
@@ -20,15 +20,16 @@ const addMessage = (sessionId, role, text) => {
   }
 };
 
-const formatContextForPrompt = (sessionId) => {
+const formatContextForPrompt = (sessionId, limit = 5) => {
   const history = getContext(sessionId);
   if (history.length === 0) return '';
   
-  let formatted = 'PREVIOUS CONVERSATION CONTEXT:\\n';
-  history.forEach(msg => {
-    formatted += `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.text}\\n`;
+  const recentHistory = history.slice(-limit);
+  let formatted = 'PREVIOUS CONVERSATION CONTEXT:\n';
+  recentHistory.forEach(msg => {
+    formatted += `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.text}\n`;
   });
-  return formatted + '\\n\\nCURRENT COMMAND:\\n';
+  return formatted + '\n\nCURRENT COMMAND:\n';
 };
 
 const clearSession = (sessionId) => {

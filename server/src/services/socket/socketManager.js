@@ -22,25 +22,29 @@ const initSocket = (httpServer) => {
 
   ioInstance.use((socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-    if (!token) {
-      return next(new Error('Authentication error: Token required'));
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+        socket.userId = decoded.id || decoded._id || decoded.owner;
+      } catch (err) {
+        logToFile(`[SocketManager] Auth token verification failed for ${socket.id}: ${err.message}`);
+      }
     }
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-      socket.userId = decoded.id; // Attach user ID to the socket
-      next();
-    } catch (err) {
-      return next(new Error('Authentication error: Invalid token'));
-    }
+    // Proceed to allow connection
+    next();
   });
 
   ioInstance.on('connection', (socket) => {
-    logToFile(`[SocketManager] New connection: ${socket.id} for user ${socket.userId}`);
+    logToFile(`[SocketManager] New connection: ${socket.id} (user: ${socket.userId || 'guest'})`);
+
+    // Immediately send current connected devices list to newly connected sockets
+    socket.emit('dashboard:devices_update', connectionManager.getAllDevices());
 
     // Device Registration
     socket.on('device:register', (deviceData) => {
-      // Force the owner ID from the authenticated socket
-      deviceData.owner = socket.userId;
+      if (socket.userId && !deviceData.owner) {
+        deviceData.owner = socket.userId;
+      }
       logToFile(`[SocketManager] device:register from ${socket.id} - ${JSON.stringify(deviceData)}`);
       connectionManager.registerDevice(socket.id, deviceData);
       socket.emit('device:connected', { status: 'success', message: 'Device registered successfully' });

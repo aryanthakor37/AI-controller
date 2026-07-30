@@ -25,3 +25,15 @@ data class CommandHistoryEntity(
     val timestamp: Long,
     val status: String
 )
+
+@Entity(tableName = "routines")
+data class RoutineEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val description: String,
+    val scheduleTime: String,
+    val actionsJson: String,
+    val isEnabled: Boolean,
+    val category: String,
+    val lastRun: String
+)

@@ -1,24 +1,32 @@
 package com.aimobile.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.aimobile.ui.components.AuroraBackground
 import com.aimobile.ui.components.CustomTextField
-import com.aimobile.ui.components.GlassCard
 import com.aimobile.ui.components.PrimaryButton
-import com.aimobile.ui.theme.DarkBackground
-import com.aimobile.ui.theme.PrimaryBlue
+import com.aimobile.ui.theme.*
 import com.aimobile.ui.viewmodel.AuthState
 import com.aimobile.ui.viewmodel.AuthViewModel
 
@@ -29,13 +37,12 @@ fun LoginScreen(
     onNavigateToForgot: () -> Unit,
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    // ── Keep all existing state & logic ───────────────────────────────────────
+    var email         by remember { mutableStateOf("") }
+    var password      by remember { mutableStateOf("") }
+    var errorMessage  by remember { mutableStateOf<String?>(null) }
+    val authState     by authViewModel.authState.collectAsState()
 
-    val authState by authViewModel.authState.collectAsState()
-
-    // React to state changes
     LaunchedEffect(authState) {
         when (authState) {
             is AuthState.Success -> {
@@ -50,66 +57,110 @@ fun LoginScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkBackground),
-        contentAlignment = Alignment.Center
-    ) {
-        GlassCard(modifier = Modifier.padding(24.dp).fillMaxWidth()) {
+    // ── UI ────────────────────────────────────────────────────────────────────
+    AuroraBackground {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
             Column(
-                modifier = Modifier.padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text("Sign In", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Welcome back to Agent.AI", fontSize = 14.sp, color = Color.White.copy(alpha = 0.6f))
-                Spacer(modifier = Modifier.height(32.dp))
+            Spacer(Modifier.height(72.dp))
 
-                CustomTextField(value = email, onValueChange = { email = it }, label = "Email Address")
-                Spacer(modifier = Modifier.height(16.dp))
+            // Logo
+            Box(
+                Modifier
+                    .size(72.dp)
+                    .background(
+                        Brush.linearGradient(listOf(Primary, Secondary)),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("AI", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            }
+
+            Spacer(Modifier.height(24.dp))
+            Text("Welcome back", color = TextPrimary, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+            Spacer(Modifier.height(6.dp))
+            Text("Sign in to Agent.AI", color = TextSub, fontSize = 15.sp)
+            Spacer(Modifier.height(40.dp))
+
+            // Form card
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CardBg, RoundedCornerShape(24.dp))
+                    .padding(24.dp)
+            ) {
                 CustomTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = "Password",
-                    visualTransformation = PasswordVisualTransformation()
+                    value = email, onValueChange = { email = it },
+                    label = "Email Address", leadingIcon = Icons.Rounded.Email
                 )
-
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Spacer(Modifier.height(16.dp))
+                CustomTextField(
+                    value = password, onValueChange = { password = it },
+                    label = "Password",
+                    visualTransformation = PasswordVisualTransformation(),
+                    leadingIcon = Icons.Rounded.Lock
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     Text(
                         "Forgot Password?",
-                        color = PrimaryBlue,
-                        fontSize = 14.sp,
+                        color = Primary, fontSize = 13.sp, fontWeight = FontWeight.Medium,
                         modifier = Modifier.clickable { onNavigateToForgot() }
                     )
                 }
 
-                if (errorMessage != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(errorMessage!!, color = Color.Red.copy(alpha = 0.8f), fontSize = 13.sp)
+                // Animated error banner
+                AnimatedVisibility(
+                    visible = errorMessage != null,
+                    enter   = slideInVertically { -it } + fadeIn(),
+                    exit    = slideOutVertically { -it } + fadeOut()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp)
+                            .background(Danger.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.Warning, contentDescription = null,
+                            tint = Danger, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(errorMessage ?: "", color = Danger, fontSize = 13.sp)
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(Modifier.height(24.dp))
 
-                if (authState is AuthState.Loading) {
-                    CircularProgressIndicator(color = PrimaryBlue)
-                } else {
-                    PrimaryButton(text = "Log In", onClick = {
+                PrimaryButton(
+                    text      = "Sign In",
+                    isLoading = authState is AuthState.Loading,
+                    onClick   = {
                         errorMessage = null
                         authViewModel.login(email, password)
-                    })
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-                Row {
-                    Text("Don't have an account? ", color = Color.White.copy(alpha = 0.6f))
-                    Text(
-                        "Sign up", color = PrimaryBlue, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable { onNavigateToRegister() }
-                    )
-                }
+                    }
+                )
             }
+
+            Spacer(Modifier.height(28.dp))
+            Row {
+                Text("Don't have an account? ", color = TextSub, fontSize = 14.sp)
+                Text(
+                    "Sign up", color = Primary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                    modifier = Modifier.clickable { onNavigateToRegister() }
+                )
+            }
+            Spacer(Modifier.height(48.dp))
         }
     }
+}
 }

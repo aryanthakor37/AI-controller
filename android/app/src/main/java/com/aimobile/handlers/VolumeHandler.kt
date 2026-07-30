@@ -23,8 +23,22 @@ class VolumeHandler(private val context: Context) {
     private fun adjustVolume(direction: Int): CommandResult {
         return try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, direction, AudioManager.FLAG_SHOW_UI)
-            CommandResult(status = "Success", message = "Volume adjusted")
+            if (direction == AudioManager.ADJUST_MUTE) {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, AudioManager.FLAG_SHOW_UI)
+                try { audioManager.setStreamVolume(AudioManager.STREAM_RING, 0, AudioManager.FLAG_SHOW_UI) } catch (_: Exception) {}
+                CommandResult(status = "Success", message = "Muted phone volume")
+            } else {
+                // Increase/Decrease by 3 steps to make it noticeable
+                for (i in 0 until 3) {
+                    audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, direction, AudioManager.FLAG_SHOW_UI)
+                }
+                try { 
+                    for (i in 0 until 3) {
+                        audioManager.adjustStreamVolume(AudioManager.STREAM_RING, direction, AudioManager.FLAG_SHOW_UI) 
+                    }
+                } catch (_: Exception) {}
+                CommandResult(status = "Success", message = if (direction == AudioManager.ADJUST_RAISE) "Increased volume" else "Decreased volume")
+            }
         } catch (e: Exception) {
             CommandResult(status = "Failed", message = "Failed to adjust volume: ${e.message}")
         }

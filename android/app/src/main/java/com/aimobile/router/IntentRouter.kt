@@ -2,6 +2,7 @@ package com.aimobile.router
  
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import com.aimobile.handlers.*
 import com.aimobile.models.CommandRequest
@@ -16,10 +17,32 @@ class IntentRouter(private val context: Context) {
     private val deviceInfoHandler = DeviceInfoHandler(context)
     private val callHandler = CallHandler(context)
     private val smsHandler = SMSHandler(context)
+    private val screenAnalysisHandler = ScreenAnalysisHandler(context)
+    private val translationHandler = TranslationHandler(context)
+    private val reminderHandler = ReminderHandler(context)
 
     suspend fun route(request: CommandRequest): CommandResult {
         return try {
+            // Wake up screen & dismiss keyguard if phone is locked/asleep
+            com.aimobile.utils.UnlockHelper.turnScreenOnAndUnlock(context)
+
             when (request.intent) {
+                "DYNAMIC_MACRO" -> {
+                    val steps = request.steps
+                    if (steps == null || steps.isEmpty()) {
+                        CommandResult("Failed", "No steps provided for DYNAMIC_MACRO")
+                    } else {
+                        val macroExecutor = com.aimobile.accessibility.macro.MacroExecutor()
+                        val success = macroExecutor.executeDynamicMacro(context, steps, request.app ?: "Dynamic Automation") { cur, tot, status ->
+                            Log.d("IntentRouter", "Macro Progress: $cur/$tot - $status")
+                        }
+                        if (success) {
+                            CommandResult("Success", "Executed dynamic automation successfully.")
+                        } else {
+                            CommandResult("Failed", "Failed to execute dynamic automation.")
+                        }
+                    }
+                }
                 "FLASHLIGHT_ON" -> flashlightHandler.turnOn()
                 "FLASHLIGHT_OFF" -> flashlightHandler.turnOff()
                 
@@ -36,26 +59,18 @@ class IntentRouter(private val context: Context) {
                             openAppHandler.openApp("OPEN_WHATSAPP")
                         }
                         cleanName == "bluetooth" || cleanName.contains("bluetooth") -> {
-                            try {
-                                val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(intent)
-                                CommandResult("Success", "Opened Bluetooth Settings")
-                            } catch (e: Exception) {
-                                CommandResult("Failed", "Could not open Bluetooth settings: ${e.message}")
-                            }
+                            val turnOn = !cleanName.contains("off")
+                            val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                            com.aimobile.accessibility.automation.AppAutomations.runBluetoothToggleAutomation(service, context, turnOn)
                         }
                         cleanName == "wifi" || cleanName == "wi-fi" || cleanName.contains("wifi") || cleanName.contains("wi-fi") -> {
-                            try {
-                                val intent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(intent)
-                                CommandResult("Success", "Opened WiFi Settings")
-                            } catch (e: Exception) {
-                                CommandResult("Failed", "Could not open WiFi settings: ${e.message}")
-                            }
+                            val turnOn = !cleanName.contains("off")
+                            val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                            com.aimobile.accessibility.automation.AppAutomations.runWifiToggleAutomation(service, context, turnOn)
+                        }
+                        cleanName.contains("dark mode") || cleanName.contains("dark theme") -> {
+                            val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                            com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, "Dark mode")
                         }
                         cleanName.contains("brightness") || cleanName.contains("display") || cleanName == "screen brightness" -> {
                             try {
@@ -63,7 +78,7 @@ class IntentRouter(private val context: Context) {
                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 }
                                 context.startActivity(intent)
-                                CommandResult("Success", "Opened Display / Brightness Settings")
+                                CommandResult("Success", "Opened Display Settings")
                             } catch (e: Exception) {
                                 CommandResult("Failed", "Could not open Display settings: ${e.message}")
                             }
@@ -217,22 +232,64 @@ class IntentRouter(private val context: Context) {
                     }
                 }
                 
+                "SET_BRIGHTNESS" -> {
+                    val msg = request.app ?: request.message ?: request.query ?: ""
+                    val cleanMsg = msg.trim().lowercase()
+                    val percentage = when {
+                        cleanMsg.contains("max") || cleanMsg.contains("full") || cleanMsg.contains("high") -> 100
+                        cleanMsg.contains("very low") || cleanMsg.contains("verylow") -> 10
+                        cleanMsg.contains("low") || cleanMsg.contains("dim") -> 30
+                        cleanMsg.contains("medium") || cleanMsg.contains("half") -> 50
+                        else -> {
+                            val match = Regex("(\\d+)\\s*%").find(cleanMsg) ?: Regex("(\\d+)").find(cleanMsg)
+                            match?.groupValues?.get(1)?.toIntOrNull() ?: 50
+                        }
+                    }
+                    com.aimobile.accessibility.automation.AppAutomations.setBrightness(context, percentage)
+                }
+
                 "INCREASE_VOLUME" -> volumeHandler.increaseVolume()
                 "DECREASE_VOLUME" -> volumeHandler.decreaseVolume()
                 "MUTE_VOLUME", "MUTE_PHONE" -> volumeHandler.muteVolume()
                 
+                "TOGGLE_QUICK_SETTING" -> {
+                    val tileName = request.app ?: request.message ?: request.query ?: ""
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, tileName)
+                }
+
                 "SET_ALARM" -> {
-                    val timeStr = request.time ?: "00:00"
-                    val parts = timeStr.split(":")
-                    val h = parts.getOrNull(0)?.toIntOrNull() ?: 0
-                    val m = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                    val rawTime = request.time ?: request.message ?: request.query ?: ""
+                    val (h, m) = parseAlarmTime(rawTime)
                     alarmHandler.setAlarm(h, m)
                 }
+
+                "SCHEDULE_AUTOMATION" -> {
+                    val rawText = request.query ?: request.message ?: ""
+                    val (h, m) = parseAlarmTime(rawText)
+                    val timeHandler = com.aimobile.handlers.TimeAutomationHandler(context)
+                    val commandToRun = rawText.replace(Regex("\\b\\d{1,2}\\s*(am|pm|vage|baje)\\b", RegexOption.IGNORE_CASE), "").trim()
+                    timeHandler.scheduleRoutine(h, m, commandToRun)
+                }
                 "START_TIMER", "SET_TIMER" -> alarmHandler.setTimer(request.duration ?: 0)
+                "SET_REMINDER", "CREATE_REMINDER", "SET_BIRTHDAY" -> {
+                    reminderHandler.scheduleReminder(
+                        title = request.title ?: request.message ?: "Special Event Reminder",
+                        dateStr = request.date,
+                        timeStr = request.time ?: "09:00",
+                        repeat = request.repeat ?: "NONE",
+                        contact = request.contact
+                    )
+                }
                 
                 "BATTERY_STATUS" -> deviceInfoHandler.getBatteryStatus()
                 "NETWORK_STATUS", "NETWORK_STATUS_CHECK" -> deviceInfoHandler.getNetworkStatus()
-                "DEVICE_INFO" -> deviceInfoHandler.getBatteryStatus() // fallback to basic status
+                "DEVICE_INFO" -> deviceInfoHandler.getDeviceInfo()
+                
+                "TAKE_SELFIE", "SELFIE" -> {
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    com.aimobile.accessibility.automation.AppAutomations.runCameraSelfieAutomation(service, context)
+                }
                 
                 "CALL_NUMBER", "CALL_CONTACT" -> {
                     val targetNum = request.number ?: request.message
@@ -247,6 +304,49 @@ class IntentRouter(private val context: Context) {
                         smsHandler.sendSMS(targetNum, smsMsg)
                     } else {
                         CommandResult("Failed", "Number or message missing")
+                    }
+                }
+                
+                "CHECK_WEATHER", "WEATHER", "WEATHER_INFO" -> {
+                    val query = request.query ?: request.message ?: "today's weather"
+                    try {
+                        val weatherUri = android.net.Uri.parse("https://www.google.com/search?q=" + android.net.Uri.encode(query))
+                        val intent = Intent(Intent.ACTION_VIEW, weatherUri).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                        CommandResult("Success", "Opened weather search for: $query")
+                    } catch (e: Exception) {
+                        CommandResult("Success", "Weather info processed")
+                    }
+                }
+
+                "GET_DIRECTIONS", "NAVIGATE", "MAP_DIRECTIONS" -> {
+                    val query = request.query ?: request.message ?: ""
+                    launchMapsNavigation(context, query, request.origin, request.destination)
+                }
+
+                "ANALYZE_SCREEN", "SUMMARIZE_SCREEN", "READ_SCREEN", "SCREEN_SUMMARY" -> {
+                    val query = request.query ?: request.message ?: ""
+                    screenAnalysisHandler.analyzeCurrentScreen(query)
+                }
+
+                "TRANSLATE_TEXT", "TRANSLATE_VOICE", "LIVE_TRANSLATE", "TRANSLATION" -> {
+                    val query = request.query ?: request.message ?: request.app
+                    translationHandler.translate(query)
+                }
+
+                "GENERAL_CHAT" -> {
+                    val msg = request.message ?: ""
+                    val lower = msg.lowercase()
+                    if (lower.contains("direction") || lower.contains("map") || lower.contains("navigate")) {
+                        launchMapsNavigation(context, msg, request.origin, request.destination)
+                    } else if (lower.contains("screen") && (lower.contains("summarize") || lower.contains("read") || lower.contains("what") || lower.contains("summary"))) {
+                        screenAnalysisHandler.analyzeCurrentScreen()
+                    } else if (lower.contains("translate") || lower.contains("ટ્રાન્સલેટ") || lower.contains("અનુવાદ")) {
+                        translationHandler.translate(msg)
+                    } else {
+                        CommandResult("Success", msg.ifEmpty { "Chat processed" })
                     }
                 }
                 
@@ -327,5 +427,91 @@ class IntentRouter(private val context: Context) {
         }
         val distance = dp[len1][len2]
         return (maxLength - distance).toDouble() / maxLength
+    }
+
+    private fun parseAlarmTime(rawTime: String): Pair<Int, Int> {
+        val clean = rawTime.lowercase().trim()
+        val match = Regex("(\\d{1,2})(?:\\s*:\\s*(\\d{1,2}))?\\s*(am|pm)?").find(clean)
+        if (match != null) {
+            var h = match.groupValues[1].toIntOrNull() ?: 7
+            val mStr = match.groupValues[2]
+            val m = if (mStr.isNotEmpty()) mStr.toIntOrNull() ?: 0 else 0
+            val ampm = match.groupValues[3]
+            if (ampm == "pm" && h < 12) h += 12
+            else if (ampm == "am" && h == 12) h = 0
+            return Pair(h.coerceIn(0, 23), m.coerceIn(0, 59))
+        }
+        // Default to 07:00 AM instead of 00:00 (12:00 AM)
+        return Pair(7, 0)
+    }
+
+    private fun launchMapsNavigation(
+        context: Context,
+        rawQuery: String,
+        originParam: String? = null,
+        destParam: String? = null
+    ): CommandResult {
+        return try {
+            var origin = originParam
+            var destination = destParam
+
+            if (destination.isNullOrBlank() && origin.isNullOrBlank()) {
+                val clean = rawQuery.lowercase()
+                    .replace("give me direction for the", "")
+                    .replace("give me directions for the", "")
+                    .replace("give me direction for", "")
+                    .replace("give me directions for", "")
+                    .replace("give me direction to", "")
+                    .replace("give me directions to", "")
+                    .replace("directions to", "")
+                    .replace("direction to", "")
+                    .replace("directions for", "")
+                    .replace("direction for", "")
+                    .replace("directions", "")
+                    .replace("direction", "")
+                    .replace("in map", "")
+                    .replace("on map", "")
+                    .replace("in google maps", "")
+                    .trim()
+
+                if (clean.contains(" to ")) {
+                    val parts = clean.split(" to ")
+                    origin = parts[0].trim()
+                    destination = parts[1].trim()
+                } else if (clean.contains(" from ")) {
+                    val parts = clean.split(" from ")
+                    destination = parts[0].trim()
+                    origin = parts[1].trim()
+                } else {
+                    destination = clean
+                }
+            }
+
+            val mapUri = if (!origin.isNullOrBlank() && !destination.isNullOrBlank()) {
+                android.net.Uri.parse("https://www.google.com/maps/dir/?api=1&origin=" + android.net.Uri.encode(origin) + "&destination=" + android.net.Uri.encode(destination) + "&travelmode=driving")
+            } else if (!destination.isNullOrBlank()) {
+                android.net.Uri.parse("google.navigation:q=" + android.net.Uri.encode(destination))
+            } else {
+                android.net.Uri.parse("https://www.google.com/maps")
+            }
+
+            val mapIntent = Intent(Intent.ACTION_VIEW, mapUri).apply {
+                setPackage("com.google.android.apps.maps")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(mapIntent)
+            CommandResult("Success", "Opening directions: ${origin ?: "Current Location"} ➔ $destination")
+        } catch (e: Exception) {
+            try {
+                val webUri = android.net.Uri.parse("https://www.google.com/maps/dir/" + android.net.Uri.encode(originParam ?: "") + "/" + android.net.Uri.encode(destParam ?: rawQuery))
+                val webIntent = Intent(Intent.ACTION_VIEW, webUri).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(webIntent)
+                CommandResult("Success", "Opened Google Maps directions in web browser")
+            } catch (e2: Exception) {
+                CommandResult("Failed", "Maps navigation error: ${e.message}")
+            }
+        }
     }
 }

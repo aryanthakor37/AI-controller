@@ -5,21 +5,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryBlue,
-    secondary = AccentPurple,
-    tertiary = AccentCyan,
-    background = DarkBackground,
-    surface = SurfaceDark,
-    onPrimary = TextPrimary,
-    onSecondary = TextPrimary,
-    onTertiary = TextPrimary,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary
+    primary          = Primary,
+    onPrimary        = TextPrimary,
+    primaryContainer = Primary.copy(alpha = 0.15f),
+    secondary        = Secondary,
+    onSecondary      = TextPrimary,
+    tertiary         = Accent,
+    onTertiary       = TextPrimary,
+    background       = Background,
+    onBackground     = TextPrimary,
+    surface          = CardBg,
+    onSurface        = TextPrimary,
+    surfaceVariant   = BorderColor,
+    onSurfaceVariant = TextSub,
+    outline          = BorderColor,
+    error            = Danger,
+    onError          = TextPrimary
 )
 
 @Composable
@@ -31,13 +36,20 @@ fun AIMobileTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            // Edge-to-edge: transparent status & navigation bars
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = false
+                isAppearanceLightNavigationBars = false
+            }
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        content = content
+        typography  = AppTypography,
+        content     = content
     )
 }

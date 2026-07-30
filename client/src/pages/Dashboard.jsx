@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { getApiUrl } from '../config';
 import { motion } from 'framer-motion';
-import { Battery, HardDrive, Smartphone, Zap, Play, Wifi } from 'lucide-react';
+import { Battery, HardDrive, Smartphone, Zap, Play, Wifi, Cake, Bell, Calendar } from 'lucide-react';
 import { Card } from '../components/atoms/Card';
 import socketService from '../services/socketService';
 
@@ -14,6 +15,7 @@ const Dashboard = () => {
 
   const [dbHistory, setDbHistory] = React.useState([]);
   const [analytics, setAnalytics] = React.useState(null);
+  const [remindersList, setRemindersList] = React.useState([]);
 
   useEffect(() => {
     socketService.connect();
@@ -46,6 +48,16 @@ const Dashboard = () => {
       .then(res => res.json())
       .then(data => {
         if (data) setAnalytics(data);
+      })
+      .catch(console.error);
+
+    // Fetch real saved Birthday & Event Reminders
+    fetch(`${getApiUrl()}/reminders`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setRemindersList(data);
       })
       .catch(console.error);
 
@@ -211,22 +223,44 @@ const Dashboard = () => {
         </motion.div>
 
         <motion.div variants={item}>
-          <Card className="h-full bg-gradient-to-br from-surface to-surface/50 border-primary/20">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <Zap className="w-5 h-5 mr-2 text-primary" />
-              AI Suggestions
-            </h3>
-            <div className="space-y-3">
-              {[
-                "Set an alarm for 7 AM",
-                "Turn on Battery Saver",
-                "Call Mom",
-                "Open Spotify and play liked songs"
-              ].map((suggestion, i) => (
-                <button key={i} className="w-full text-left p-4 rounded-xl glass hover:bg-primary/20 hover:border-primary/50 transition-all text-slate-300 hover:text-white">
-                  "{suggestion}"
-                </button>
-              ))}
+          <Card className="h-full bg-gradient-to-br from-surface to-surface/50 border-pink-500/20">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold flex items-center text-white">
+                <Cake className="w-5 h-5 mr-2 text-pink-400" />
+                Birthdays & Active Reminders
+              </h3>
+              <Link to="/dashboard/reminders" className="text-xs text-pink-400 hover:text-pink-300 font-medium">
+                Manage All →
+              </Link>
+            </div>
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+              {remindersList.map((rem) => {
+                const isBirthday = rem.title.toLowerCase().includes('birthday') || rem.repeat === 'YEARLY';
+                return (
+                  <div key={rem._id} className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between hover:bg-white/10 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-lg ${isBirthday ? 'bg-pink-500/20 text-pink-400' : 'bg-primary/20 text-primary'}`}>
+                        {isBirthday ? <Cake className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm text-slate-100">{rem.title}</p>
+                        <p className="text-xs text-slate-400 flex items-center mt-0.5">
+                          <Calendar className="w-3 h-3 mr-1 text-slate-500" /> {rem.date} @ {rem.time}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 bg-white/5 text-slate-300 rounded uppercase">
+                      {rem.repeat || 'ONCE'}
+                    </span>
+                  </div>
+                );
+              })}
+              {remindersList.length === 0 && (
+                <div className="text-center py-8 text-slate-400 text-sm space-y-2">
+                  <p>No active reminders stored.</p>
+                  <p className="text-xs text-slate-500">Ask AI in chat e.g. <i>"Set birthday reminder for [Name]"</i></p>
+                </div>
+              )}
             </div>
           </Card>
         </motion.div>

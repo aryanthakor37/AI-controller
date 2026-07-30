@@ -21,6 +21,12 @@ class VoiceRepository @Inject constructor(
     private val intentRouter = IntentRouter(context)
 
     suspend fun sendVoiceCommand(command: String): VoiceCommandResult = withContext(Dispatchers.IO) {
+        // Try local parsing first for instant execution of basic commands
+        val localResult = parseLocalFallback(command)
+        if (localResult is VoiceCommandResult.Success && localResult.intent != "UNKNOWN_COMMAND") {
+            return@withContext localResult
+        }
+
         try {
             val response = apiService.sendChat(ChatRequest(command))
             if (response.isSuccessful && response.body() != null) {
@@ -34,19 +40,49 @@ class VoiceRepository @Inject constructor(
                     
                     return@withContext VoiceCommandResult.Success(intent, reply, request)
                 } else {
-                    return@withContext parseLocalFallback(command)
+                    return@withContext VoiceCommandResult.Error("API returned empty data.")
                 }
             } else {
-                return@withContext parseLocalFallback(command)
+                return@withContext VoiceCommandResult.Error("API Error: ${response.code()}")
             }
         } catch (e: Exception) {
-            Log.e("VoiceRepository", "Error processing voice command: ${e.message}. Falling back to local parser.", e)
-            return@withContext parseLocalFallback(command)
+            Log.e("VoiceRepository", "Error processing voice command: ${e.message}", e)
+            return@withContext VoiceCommandResult.Error("Network error. Could not connect to AI.")
         }
     }
 
     suspend fun executeCommandLocally(request: CommandRequest): CommandResult {
         return intentRouter.route(request)
+    }
+
+    private fun levenshteinDistance(a: String, b: String): Int {
+        val costs = IntArray(b.length + 1) { it }
+        for (i in 1..a.length) {
+            var nw = i - 1
+            costs[0] = i
+            for (j in 1..b.length) {
+                val cj = minOf(1 + minOf(costs[j], costs[j - 1]), if (a[i - 1] == b[j - 1]) nw else nw + 1)
+                nw = costs[j]
+                costs[j] = cj
+            }
+        }
+        return costs[b.length]
+    }
+
+    private fun matchesKeyword(input: String, vararg keywords: String): Boolean {
+        val words = input.split(" ", "-", "_")
+        for (keyword in keywords) {
+            if (input.contains(keyword)) return true
+            val maxDist = if (keyword.length > 5) 2 else 1
+            if (keyword.length > 3) {
+                for (word in words) {
+                    if (word.length >= 3 && levenshteinDistance(word, keyword) <= maxDist) {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
     }
 
     private fun parseLocalFallback(command: String): VoiceCommandResult {
@@ -61,55 +97,132 @@ class VoiceRepository @Inject constructor(
         var timerDuration: String? = null
 
         when {
-            clean.startsWith("search ") || clean.startsWith("play ") -> {
+            clean.contains("search ") || clean.contains("play ") -> {
                 intent = "SEARCH_APP"
-                val regexWord = if (clean.startsWith("search ")) "search" else "play"
-                val match = Regex("$regexWord\\s+(.*?)\\s+(?:in|on)\\s+(.*)").find(clean)
-                if (match != null) {
-                    smsMsg = match.groupValues[1].trim() // query
-                    appName = match.groupValues[2].trim() // app
-                } else {
-                    val simpleMatch = Regex("$regexWord\\s+(.*)").find(clean)
-                    if (simpleMatch != null) {
-                        smsMsg = simpleMatch.groupValues[1].trim() // query
-                        appName = "YouTube" // default app
+                val searchIndex = clean.indexOf("search ")
+                val playIndex = clean.indexOf("play ")
+                val startIndex = if (searchIndex != -1) searchIndex + 7 else playIndex + 5
+                
+                val rawQuery = clean.substring(startIndex).trim()
+                val appKeywords = listOf("youtube", "spotify", "maps", "map", "chrome", "google", "browser", "instagram", "play store", "playstore", "store", "telegram")
+                var detectedApp: String? = null
+                var finalQuery = rawQuery
+
+                if (clean.startsWith("open ") || clean.startsWith("launch ")) {
+                    val prefixLen = if (clean.startsWith("open ")) 5 else 7
+                    val openTarget = clean.substring(prefixLen).substringBefore(" search ").substringBefore(" and search ").trim()
+                    if (openTarget.isNotEmpty() && openTarget != clean.substring(prefixLen).trim()) {
+                        detectedApp = openTarget
+                        finalQuery = clean.substringAfter("search ").trim()
                     }
                 }
+
+                if (detectedApp == null) {
+                    for (app in appKeywords) {
+                        if (rawQuery.endsWith(" on $app") || rawQuery.endsWith(" in $app")) {
+                            detectedApp = app
+                            finalQuery = rawQuery.substring(0, rawQuery.length - (app.length + 4)).trim()
+                            break
+                        }
+                    }
+                }
+
+                if (detectedApp == null) {
+                    detectedApp = when {
+                        clean.contains("youtube") -> "YouTube"
+                        clean.contains("spotify") -> "Spotify"
+                        clean.contains("map") || clean.contains("maps") -> "Maps"
+                        clean.contains("chrome") || clean.contains("browser") -> "Chrome"
+                        clean.contains("instagram") -> "Instagram"
+                        clean.contains("play store") || clean.contains("playstore") || clean.contains("store") -> "Play Store"
+                        clean.contains("telegram") -> "Telegram"
+                        else -> "YouTube"
+                    }
+                }
+
+                appName = detectedApp
+                smsMsg = finalQuery // smsMsg is used for queryText in VoiceRepository
             }
-            clean.contains("flashlight on") || clean.contains("torch on") || clean.contains("turn on flashlight") || clean.contains("turn on torch") || clean.contains("flashlight open") || clean.contains("fleshlight open") -> {
-                intent = "FLASHLIGHT_ON"
+            matchesKeyword(clean, "flashlight", "fleshlight", "torch") -> {
+                if (clean.contains("off") || clean.contains("close") || clean.contains("bandh") || clean.contains("band")) {
+                    intent = "FLASHLIGHT_OFF"
+                } else {
+                    intent = "FLASHLIGHT_ON"
+                }
             }
-            clean.contains("flashlight off") || clean.contains("torch off") || clean.contains("turn off flashlight") || clean.contains("turn off torch") || clean.contains("flashlight close") -> {
-                intent = "FLASHLIGHT_OFF"
+            matchesKeyword(clean, "camera", "camra", "photo", "photos", "gallery") -> {
+                if (clean.contains("gallery") || clean.contains("photo")) {
+                    intent = "OPEN_GALLERY"
+                } else {
+                    intent = "OPEN_CAMERA"
+                }
             }
-            clean.contains("open camera") || clean.contains("camera") -> {
-                intent = "OPEN_CAMERA"
-            }
-            clean.contains("open gallery") || clean.contains("gallery") -> {
-                intent = "OPEN_GALLERY"
-            }
-            clean.contains("open chrome") || clean.contains("chrome") || clean.contains("browser") -> {
+            matchesKeyword(clean, "chrome", "browser", "internet") && !matchesKeyword(clean, "wifi") -> {
                 intent = "OPEN_CHROME"
             }
-            clean.contains("open youtube") || clean.contains("youtube") -> {
+            matchesKeyword(clean, "youtube", "utube", "youtub") -> {
                 intent = "OPEN_YOUTUBE"
             }
-            clean.contains("open maps") || clean.contains("maps") -> {
+            matchesKeyword(clean, "map", "maps", "naksho") -> {
                 intent = "OPEN_MAPS"
             }
-            clean.contains("open spotify") || clean.contains("spotify") -> {
+            matchesKeyword(clean, "bluetooth", "bluetoth", "blutoth") -> {
+                intent = "OPEN_APP"
+                appName = clean
+            }
+            matchesKeyword(clean, "wifi", "wi-fi", "wfi") -> {
+                intent = "OPEN_APP"
+                appName = clean
+            }
+            matchesKeyword(clean, "dark mode", "dark theme", "dark") -> {
+                intent = "OPEN_APP"
+                appName = clean
+            }
+            matchesKeyword(clean, "brightness", "display", "bruitnes", "bright") -> {
+                intent = "SET_BRIGHTNESS"
+                appName = clean
+            }
+            matchesKeyword(clean, "nearby", "quick share") -> {
+                intent = "OPEN_APP"
+                appName = "Nearby Share"
+            }
+            matchesKeyword(clean, "spotify", "music", "song", "songs") && !clean.contains("youtube") -> {
                 intent = "OPEN_APP"
                 appName = "Spotify"
             }
-            clean.contains("open whatsapp") || clean.contains("whatsapp") -> {
+            matchesKeyword(clean, "whatsapp", "watsap", "whatsap") -> {
                 intent = "OPEN_APP"
                 appName = "WhatsApp"
             }
-            clean.contains("alarm") || clean.contains("clock") || clean.contains("alaram") -> {
+            clean.contains("call ") || clean.contains("dial ") || clean.startsWith("call") -> {
+                intent = "CALL_CONTACT"
+                val target = clean.replace("call ", "").replace("dial ", "").replace("to ", "").replace("contact ", "").trim()
+                contactName = if (target.isNotBlank()) target else "Mom"
+            }
+            matchesKeyword(clean, "volume", "sound", "awaj", "ringtone") -> {
+                if (clean.contains("up") || clean.contains("increase") || clean.contains("vadhare") || clean.contains("vadhar") || clean.contains("vadaar")) {
+                    intent = "INCREASE_VOLUME"
+                } else if (clean.contains("down") || clean.contains("decrease") || clean.contains("ochhu") || clean.contains("ghatad") || clean.contains("low")) {
+                    intent = "DECREASE_VOLUME"
+                } else if (clean.contains("mute") || clean.contains("bandh") || clean.contains("band")) {
+                    intent = "MUTE_VOLUME"
+                } else {
+                    intent = "OPEN_APP"
+                    appName = "Volume"
+                }
+            }
+            clean.contains("screen") || (clean.contains("summarize") && !clean.contains("news")) -> {
+                intent = "SUMMARIZE_SCREEN"
+            }
+            clean.contains("translate") || clean.contains("ટ્રાન્સલેટ") || clean.contains("અનુવાદ") -> {
+                intent = "TRANSLATE_TEXT"
+                smsMsg = command
+            }
+            clean.contains("alarm") || clean.contains("clock") || clean.contains("alaram") || clean.contains("wake me") -> {
                 intent = "SET_ALARM"
                 val match = Regex("(\\d+)(?:\\s*:\\s*(\\d+))?\\s*(am|pm)?").find(clean)
                 if (match != null) {
-                    var h = match.groupValues[1].toIntOrNull() ?: 0
+                    var h = match.groupValues[1].toIntOrNull() ?: 7
                     val mStr = match.groupValues[2]
                     val m = if (mStr.isNotEmpty()) mStr.toIntOrNull() ?: 0 else 0
                     val ampm = match.groupValues[3]
@@ -119,10 +232,16 @@ class VoiceRepository @Inject constructor(
                     
                     hour = h
                     minute = m
+                } else {
+                    hour = 7
+                    minute = 0
                 }
             }
             else -> {
-                if (clean.startsWith("open ") || clean.startsWith("launch ") || clean.startsWith("start ")) {
+                if (clean.contains("turn on ") || clean.contains("turn off ") || clean.contains("toggle ") || clean.contains("enable ") || clean.contains("disable ") || clean.endsWith(" on") || clean.endsWith(" off")) {
+                    intent = "TOGGLE_QUICK_SETTING"
+                    appName = clean.replace("turn on ", "").replace("turn off ", "").replace("toggle ", "").replace("enable ", "").replace("disable ", "").let { if (it.endsWith(" on")) it.dropLast(3) else if (it.endsWith(" off")) it.dropLast(4) else it }.trim()
+                } else if (clean.startsWith("open ") || clean.startsWith("launch ") || clean.startsWith("start ")) {
                     intent = "OPEN_APP"
                     appName = clean.replace("open ", "").replace("launch ", "").replace("start ", "").replace("app ", "").trim()
                 } else {
@@ -181,7 +300,8 @@ class VoiceRepository @Inject constructor(
             duration = durationSeconds,
             query = chatData.query,
             message = chatData.message,
-            app = chatData.app
+            app = chatData.app,
+            steps = chatData.steps
         )
     }
 }

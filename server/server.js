@@ -79,11 +79,19 @@ const voiceRoutes = require('./src/routes/voiceRoutes');
 const authRoutes = require('./src/routes/authRoutes');
 const deviceRoutes = require('./src/routes/deviceRoutes');
 const cloudRoutes = require('./src/routes/cloudRoutes');
+const reminderRoutes = require('./src/routes/reminderRoutes');
+const subscriptionRoutes = require('./src/routes/subscriptionRoutes');
+const routineRoutes = require('./src/routes/routineRoutes');
+const healthRoutes = require('./src/routes/healthRoutes');
 
 app.use('/api/ai', aiRoutes);
 app.use('/api/voice', voiceRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/device', deviceRoutes);
+app.use('/api/reminders', reminderRoutes);
+app.use('/api/routines', routineRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/health', healthRoutes);
 app.use('/api', cloudRoutes);
 
 const PORT = process.env.PORT || 5000;

@@ -16,12 +16,35 @@ class MyAccessibilityService : AccessibilityService() {
         _isServiceEnabled.value = true
     }
 
+    var macroRecorderManager: com.aimobile.accessibility.macro.MacroRecorderManager? = null
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Can monitor target package changes if needed
         event?.let {
             if (it.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
                 currentActivePackage = it.packageName?.toString() ?: ""
                 Log.d("AccessibilityService", "Window State Changed: $currentActivePackage")
+            }
+
+            // Macro recording event listener
+            macroRecorderManager?.let { recorder ->
+                if (recorder.isRecording.value) {
+                    val pkg = it.packageName?.toString() ?: currentActivePackage
+                    when (it.eventType) {
+                        AccessibilityEvent.TYPE_VIEW_CLICKED -> {
+                            val node = it.source
+                            val viewId = node?.viewIdResourceName
+                            val text = it.text?.firstOrNull()?.toString() ?: node?.text?.toString()
+                            val desc = it.contentDescription?.toString() ?: node?.contentDescription?.toString()
+                            recorder.recordClick(pkg, viewId, text, desc)
+                        }
+                        AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
+                            val typedText = it.text?.firstOrNull()?.toString()
+                            if (!typedText.isNullOrBlank()) {
+                                recorder.recordTextInput(pkg, typedText)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

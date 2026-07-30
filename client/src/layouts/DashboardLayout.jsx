@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, Link, Navigate } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, Mic, History, Smartphone, Settings, User } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Mic, History, Smartphone, Settings, User, Bell, Layers } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useSelector } from 'react-redux';
 
@@ -18,6 +18,8 @@ const Sidebar = () => (
         { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
         { name: 'AI Chat', path: '/dashboard/chat', icon: MessageSquare },
         { name: 'Voice Control', path: '/dashboard/voice', icon: Mic },
+        { name: 'AI Routines', path: '/dashboard/routines', icon: Layers },
+        { name: 'Reminders', path: '/dashboard/reminders', icon: Bell },
         { name: 'History', path: '/dashboard/history', icon: History },
         { name: 'Device', path: '/dashboard/device', icon: Smartphone },
         { name: 'Settings', path: '/dashboard/settings', icon: Settings },

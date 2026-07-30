@@ -37,6 +37,19 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  subscriptionTier: {
+    type: String,
+    enum: ['Free', 'Pro', 'Enterprise'],
+    default: 'Free',
+  },
+  dailyCommandCount: {
+    type: Number,
+    default: 0,
+  },
+  lastCommandReset: {
+    type: Date,
+    default: Date.now,
+  },
   verificationCode: {
     type: String,
     default: null,

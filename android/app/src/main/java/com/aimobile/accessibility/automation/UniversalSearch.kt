@@ -33,34 +33,36 @@ object UniversalSearch {
             Log.d("UniversalSearch", "Waiting for app to load...")
             delay(2500) // Wait for app to open and render
 
-            var searchNode = findSearchNode(service.rootInActiveWindow)
-            if (searchNode == null) {
-                // Sometime search is a button that opens a text field
-                val searchBtn = findSearchIcon(service.rootInActiveWindow)
-                if (searchBtn != null) {
-                    searchBtn.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    delay(1000)
-                    searchNode = findSearchNode(service.rootInActiveWindow)
-                }
+            // 1. Try to click a search button/icon using AutomationManager (which handles unclickable nodes by clicking parents)
+            var clicked = AutomationManager.clickNodeByContentDescription(service, "search", 2)
+            if (!clicked) clicked = AutomationManager.clickNodeByContentDescription(service, "Search", 1)
+            if (!clicked) clicked = AutomationManager.clickNodeByText(service, "Search", 1)
+            if (!clicked) clicked = AutomationManager.clickNodeByText(service, "search", 1)
+            
+            if (clicked) {
+                delay(1000)
             }
 
-            if (searchNode != null) {
-                Log.d("UniversalSearch", "Found search node, typing query: $query")
-                val arguments = Bundle()
-                arguments.putCharSequence(
-                    AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
-                    query
-                )
-                searchNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
-                delay(500)
+            // 2. Try to find the focused input node or any EditText and paste the query
+            val inputSuccess = AutomationManager.findAndInputText(service, query, 3)
+            if (inputSuccess) {
+                Log.d("UniversalSearch", "Successfully inputted text into focused node")
                 
-                // Try to trigger search action
-                // In many apps, setting text is enough to trigger live search
-                // Or we can try to press Enter (IME action) if supported
-                searchNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                
+                // Optional: try to click enter/search action on keyboard, or click a "Search" button again
             } else {
-                Log.d("UniversalSearch", "Could not find any search bar in $packageName")
+                // Fallback: manually find an EditText
+                var searchNode = findSearchNode(service.rootInActiveWindow)
+                if (searchNode != null) {
+                    Log.d("UniversalSearch", "Found fallback search node, typing query: $query")
+                    val arguments = Bundle()
+                    arguments.putCharSequence(
+                        AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                        query
+                    )
+                    searchNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+                } else {
+                    Log.d("UniversalSearch", "Could not find any search bar in $packageName")
+                }
             }
         }
         

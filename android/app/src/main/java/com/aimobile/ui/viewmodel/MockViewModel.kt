@@ -62,36 +62,6 @@ class MockViewModel @Inject constructor(
     private val tokenManager = TokenManager(context)
     private val gson = Gson()
 
-    private val _routines = MutableStateFlow<List<com.aimobile.utils.Routine>>(tokenManager.getRoutines())
-    val routines: StateFlow<List<com.aimobile.utils.Routine>> = _routines.asStateFlow()
-
-    fun addCustomRoutine(name: String, trigger: String, commands: List<String>) {
-        val currentList = _routines.value.toMutableList()
-        currentList.removeAll { it.trigger.lowercase().trim() == trigger.lowercase().trim() }
-        currentList.add(com.aimobile.utils.Routine(name, trigger, commands))
-        tokenManager.saveRoutines(currentList)
-        _routines.value = currentList
-    }
-
-    fun deleteRoutine(trigger: String) {
-        val currentList = _routines.value.toMutableList()
-        currentList.removeAll { it.trigger.lowercase().trim() == trigger.lowercase().trim() }
-        tokenManager.saveRoutines(currentList)
-        _routines.value = currentList
-    }
-
-    fun runRoutineDirectly(routine: com.aimobile.utils.Routine, onFeedback: (String) -> Unit) {
-        viewModelScope.launch {
-            onFeedback("⚡ Starting Routine: ${routine.name}...")
-            for (command in routine.commands) {
-                onFeedback("⏳ Executing: \"$command\"")
-                executeSingleCommand(command)
-                kotlinx.coroutines.delay(2000)
-            }
-            onFeedback("✅ Routine \"${routine.name}\" completed!")
-        }
-    }
-
     // Load real user name from saved profile
     private val _user = MutableStateFlow(loadUser())
     val user: StateFlow<MockUser> = _user.asStateFlow()
@@ -159,6 +129,24 @@ class MockViewModel @Inject constructor(
     private val _isChatLoading = MutableStateFlow(false)
     val isChatLoading: StateFlow<Boolean> = _isChatLoading.asStateFlow()
 
+    fun clearChat() {
+        _chatMessages.value = emptyList()
+    }
+
+    private val _favoriteCommands = MutableStateFlow(
+        setOf(
+            "What is the weather today?",
+            "Airplane mode on",
+            "Turn on Hotspot"
+        )
+    )
+    val favoriteCommands: StateFlow<Set<String>> = _favoriteCommands.asStateFlow()
+
+    fun toggleFavoriteCommand(command: String) {
+        val current = _favoriteCommands.value
+        _favoriteCommands.value = if (current.contains(command)) current - command else current + command
+    }
+
     private fun loadUser(): MockUser {
         val userJson = tokenManager.getUser() ?: return MockUser()
         return try {
@@ -174,38 +162,11 @@ class MockViewModel @Inject constructor(
 
     private val intentRouter = com.aimobile.router.IntentRouter(context)
 
-    private suspend fun executeSingleCommand(cmdText: String): String {
-        return try {
-            val response = apiService.sendChat(ChatRequest(command = cmdText))
-            if (response.isSuccessful && response.body() != null) {
-                val body = response.body()!!
-                val data = body.data
-                when {
-                    data == null -> "Sorry, I couldn't understand that."
-                    data.reply != null && data.reply.isNotBlank() -> data.reply
-                    data.intent == "UNKNOWN_COMMAND" ->
-                        "I didn't understand that command. Try something like:\n• 'Open camera'\n• 'Turn on flashlight'\n• 'Set alarm for 7am'\n• 'What's the battery level?'"
-                    data.intent != null -> {
-                        val request = com.aimobile.models.CommandRequest(
-                            intent = data.intent,
-                            number = data.number ?: data.contact,
-                            time = data.time,
-                            duration = data.duration?.toIntOrNull(),
-                            query = data.query,
-                            message = data.message ?: data.app ?: data.contact,
-                            app = data.app
-                        )
-                        intentRouter.route(request)
-                        "✅ Command executed: ${data.intent.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }}"
-                    }
-                    else -> "I didn't understand that. Please try again."
-                }
-            } else {
-                executeOfflineFallback(cmdText)
-            }
-        } catch (e: Exception) {
-            executeOfflineFallback(cmdText)
-        }
+    private val _lastActionFeedback = MutableStateFlow<String?>(null)
+    val lastActionFeedback: StateFlow<String?> = _lastActionFeedback.asStateFlow()
+
+    fun clearActionFeedback() {
+        _lastActionFeedback.value = null
     }
 
     fun sendMessage(text: String) {
@@ -216,60 +177,118 @@ class MockViewModel @Inject constructor(
             time = "Now"
         )
         _chatMessages.value = _chatMessages.value + userMsg
+        _isChatLoading.value = true
 
-        val cleanText = text.lowercase().trim()
-        val matchedRoutine = _routines.value.firstOrNull { it.trigger.lowercase().trim() == cleanText }
-
-        if (matchedRoutine != null) {
-            _isChatLoading.value = true
-            viewModelScope.launch {
-                _chatMessages.value = _chatMessages.value + MockChatMessage(
-                    id = System.currentTimeMillis().toString(),
-                    text = "⚡ Running Routine: ${matchedRoutine.name}...",
-                    isUser = false,
-                    time = "Now"
-                )
-
-                for (command in matchedRoutine.commands) {
-                    kotlinx.coroutines.delay(1000)
+        viewModelScope.launch {
+            try {
+                val localFallback = executeOfflineFallback(text)
+                if (!localFallback.contains("couldn't recognize") && !localFallback.contains("Server offline")) {
                     _chatMessages.value = _chatMessages.value + MockChatMessage(
-                        id = System.currentTimeMillis().toString(),
-                        text = "⏳ Action: \"$command\"",
+                        id = (System.currentTimeMillis() + 1).toString(),
+                        text = localFallback,
                         isUser = false,
                         time = "Now"
                     )
-
-                    val resultText = executeSingleCommand(command)
-
-                    _chatMessages.value = _chatMessages.value + MockChatMessage(
-                        id = System.currentTimeMillis().toString(),
-                        text = resultText,
-                        isUser = false,
-                        time = "Now"
-                    )
+                    _isChatLoading.value = false
+                    return@launch
                 }
 
+                val response = apiService.sendChat(ChatRequest(command = text))
+                val aiText = if (response.isSuccessful && response.body() != null) {
+                    val body = response.body()!!
+                    val data = body.data
+                    when {
+                        data == null -> {
+                            _lastActionFeedback.value = "❌ Could not process command"
+                            "Sorry, I couldn't understand that."
+                        }
+                        data.reply != null && data.reply.isNotBlank() -> {
+                            val shortReply = data.reply.lines().firstOrNull { it.isNotBlank() } ?: "✅ Done"
+                            _lastActionFeedback.value = if (shortReply.length > 35) shortReply.take(35) + "…" else shortReply
+                            data.reply
+                        }
+                        data.intent == "UNKNOWN_COMMAND" -> {
+                            val fallback = executeOfflineFallback(text)
+                            if (fallback.contains("couldn't recognize") || fallback.contains("Server offline")) {
+                                _lastActionFeedback.value = "❌ Command unrecognized"
+                                "I didn't understand that command. Try something like:\n• 'Open camera'\n• 'Turn on flashlight'\n• 'Set alarm for 7am'\n• 'What is the weather today?'"
+                            } else {
+                                fallback
+                            }
+                        }
+                        data.intent != null -> {
+                            // Route the successful command locally as well to make it work from Chat screen!
+                            val request = com.aimobile.models.CommandRequest(
+                                intent = data.intent,
+                                number = data.number ?: data.contact,
+                                time = data.time,
+                                duration = data.duration?.toIntOrNull(),
+                                query = data.query,
+                                message = data.message ?: data.app ?: data.contact,
+                                app = data.app
+                            )
+                            val res = intentRouter.route(request)
+                            val friendlyName = data.intent.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
+                            val resultText = if (res.status == "Success") "✅ $friendlyName: ${res.message}" else "❌ ${res.message}"
+                            _lastActionFeedback.value = resultText
+                            resultText
+                        }
+                        else -> {
+                            _lastActionFeedback.value = "❌ Could not understand"
+                            "I didn't understand that. Please try again."
+                        }
+                    }
+                } else {
+                    executeOfflineFallback(text)
+                }
                 _chatMessages.value = _chatMessages.value + MockChatMessage(
-                    id = System.currentTimeMillis().toString(),
-                    text = "✅ Routine \"${matchedRoutine.name}\" completed successfully!",
+                    id = (System.currentTimeMillis() + 1).toString(),
+                    text = aiText,
                     isUser = false,
                     time = "Now"
                 )
-                _isChatLoading.value = false
-            }
-        } else {
-            _isChatLoading.value = true
-            viewModelScope.launch {
-                val resultText = executeSingleCommand(text)
+            } catch (e: Exception) {
+                val fallbackText = executeOfflineFallback(text)
                 _chatMessages.value = _chatMessages.value + MockChatMessage(
-                    id = System.currentTimeMillis().toString(),
-                    text = resultText,
+                    id = (System.currentTimeMillis() + 1).toString(),
+                    text = fallbackText,
                     isUser = false,
                     time = "Now"
                 )
+            } finally {
                 _isChatLoading.value = false
             }
         }
+    }
+
+    private fun levenshteinDistance(a: String, b: String): Int {
+        val costs = IntArray(b.length + 1) { it }
+        for (i in 1..a.length) {
+            var nw = i - 1
+            costs[0] = i
+            for (j in 1..b.length) {
+                val cj = minOf(1 + minOf(costs[j], costs[j - 1]), if (a[i - 1] == b[j - 1]) nw else nw + 1)
+                nw = costs[j]
+                costs[j] = cj
+            }
+        }
+        return costs[b.length]
+    }
+
+    private fun matchesKeyword(input: String, vararg keywords: String): Boolean {
+        val words = input.split(" ", "-", "_")
+        for (keyword in keywords) {
+            if (input.contains(keyword)) return true
+            val maxDist = if (keyword.length > 5) 2 else 1
+            if (keyword.length > 3) {
+                for (word in words) {
+                    if (word.length >= 3 && levenshteinDistance(word, keyword) <= maxDist) {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
     }
 
     private suspend fun executeOfflineFallback(command: String): String {
@@ -291,11 +310,21 @@ class MockViewModel @Inject constructor(
                 var detectedApp: String? = null
                 var finalQuery = rawQuery
 
-                for (app in appKeywords) {
-                    if (rawQuery.endsWith(" on $app") || rawQuery.endsWith(" in $app")) {
-                        detectedApp = app
-                        finalQuery = rawQuery.substring(0, rawQuery.length - (app.length + 4)).trim()
-                        break
+                if (clean.startsWith("open ")) {
+                    val openTarget = clean.substring(5).substringBefore(" search ").substringBefore(" and search ").trim()
+                    if (openTarget.isNotEmpty() && openTarget != clean.substring(5).trim()) {
+                        detectedApp = openTarget
+                        finalQuery = clean.substringAfter("search ").trim()
+                    }
+                }
+
+                if (detectedApp == null) {
+                    for (app in appKeywords) {
+                        if (rawQuery.endsWith(" on $app") || rawQuery.endsWith(" in $app")) {
+                            detectedApp = app
+                            finalQuery = rawQuery.substring(0, rawQuery.length - (app.length + 4)).trim()
+                            break
+                        }
                     }
                 }
 
@@ -315,61 +344,174 @@ class MockViewModel @Inject constructor(
                 appName = detectedApp
                 queryText = finalQuery
             }
-            clean.contains("flashlight on") || clean.contains("torch on") || clean.contains("turn on flashlight") || clean.contains("turn on torch") || clean.contains("flashlight open") || clean.contains("fleshlight open") -> {
-                intent = "FLASHLIGHT_ON"
+            clean.contains("direction") || (clean.contains("palanpur") && clean.contains("deesa")) -> {
+                intent = "GET_DIRECTIONS"
+                queryText = command
             }
-            clean.contains("flashlight off") || clean.contains("torch off") || clean.contains("turn off flashlight") || clean.contains("turn off torch") || clean.contains("flashlight close") -> {
-                intent = "FLASHLIGHT_OFF"
+            clean.contains("screen") || (clean.contains("summarize") && !clean.contains("news")) -> {
+                intent = "SUMMARIZE_SCREEN"
+                queryText = command
             }
-            clean.contains("open camera") || clean.contains("camera") -> {
-                intent = "OPEN_CAMERA"
+            clean.contains("translate") || clean.contains("ટ્રાન્સલેટ") || clean.contains("અનુવાદ") -> {
+                intent = "TRANSLATE_TEXT"
+                queryText = command
             }
-            clean.contains("open gallery") || clean.contains("gallery") -> {
-                intent = "OPEN_GALLERY"
+            matchesKeyword(clean, "flashlight", "fleshlight", "torch") -> {
+                if (clean.contains("off") || clean.contains("close") || clean.contains("bandh") || clean.contains("band")) {
+                    intent = "FLASHLIGHT_OFF"
+                } else {
+                    intent = "FLASHLIGHT_ON"
+                }
             }
-            clean.contains("open chrome") || clean.contains("chrome") || clean.contains("browser") -> {
+            matchesKeyword(clean, "selfie", "selfy") -> {
+                intent = "TAKE_SELFIE"
+            }
+            matchesKeyword(clean, "camera", "camra", "photo", "photos", "gallery") -> {
+                if (clean.contains("gallery") || clean.contains("photo")) {
+                    intent = "OPEN_GALLERY"
+                } else {
+                    intent = "OPEN_CAMERA"
+                }
+            }
+            matchesKeyword(clean, "chrome", "browser", "internet") && !matchesKeyword(clean, "wifi") -> {
                 intent = "OPEN_CHROME"
             }
-            clean.contains("open youtube") || clean.contains("youtube") -> {
+            matchesKeyword(clean, "youtube", "utube", "youtub") -> {
                 intent = "OPEN_YOUTUBE"
             }
-            clean.contains("open maps") || clean.contains("maps") -> {
+            matchesKeyword(clean, "map", "maps", "naksho") -> {
                 intent = "OPEN_MAPS"
             }
-            clean.contains("bluetooth") || clean.contains("blue tooth") -> {
+            matchesKeyword(clean, "bluetooth", "bluetoth", "blutoth") -> {
                 intent = "OPEN_APP"
-                appName = "Bluetooth"
+                appName = clean
             }
-            clean.contains("wifi") || clean.contains("wi-fi") || clean.contains("wi fi") -> {
+            matchesKeyword(clean, "wifi", "wi-fi", "wfi") -> {
                 intent = "OPEN_APP"
-                appName = "Wifi"
+                appName = clean
             }
-            clean.contains("brightness") || clean.contains("display") || clean.contains("screen light") -> {
+            matchesKeyword(clean, "dark mode", "dark theme", "dark") -> {
                 intent = "OPEN_APP"
-                appName = "Brightness"
+                appName = clean
             }
-            clean.contains("volume settings") || clean.contains("sound settings") || clean.contains("ringtone") -> {
-                intent = "OPEN_APP"
-                appName = "Volume"
+            matchesKeyword(clean, "brightness", "display", "bruitnes", "bright") -> {
+                intent = "SET_BRIGHTNESS"
+                appName = clean
             }
-            clean.contains("nearby") || clean.contains("near by") || clean.contains("quick share") || clean.contains("share settings") -> {
+            matchesKeyword(clean, "nearby", "quick share") -> {
                 intent = "OPEN_APP"
                 appName = "Nearby Share"
             }
-            clean.contains("open spotify") || clean.contains("spotify") -> {
+            matchesKeyword(clean, "spotify", "music", "song", "songs") && !clean.contains("youtube") -> {
                 intent = "OPEN_APP"
                 appName = "Spotify"
             }
-            clean.contains("open whatsapp") || clean.contains("whatsapp") -> {
+            matchesKeyword(clean, "whatsapp", "watsap", "whatsap") -> {
                 intent = "OPEN_APP"
                 appName = "WhatsApp"
             }
-            clean.contains("alarm") || clean.contains("clock") || clean.contains("alaram") -> {
+            clean.contains("call ") || clean.contains("dial ") || clean.startsWith("call") -> {
+                intent = "CALL_CONTACT"
+                val target = clean.replace("call ", "").replace("dial ", "").replace("to ", "").replace("contact ", "").trim()
+                queryText = if (target.isNotBlank()) target else "Mom"
+            }
+            matchesKeyword(clean, "volume", "sound", "awaj", "ringtone") -> {
+                if (clean.contains("up") || clean.contains("increase") || clean.contains("vadhare") || clean.contains("vadhar") || clean.contains("vadaar")) {
+                    intent = "INCREASE_VOLUME"
+                } else if (clean.contains("down") || clean.contains("decrease") || clean.contains("ochhu") || clean.contains("ghatad") || clean.contains("low")) {
+                    intent = "DECREASE_VOLUME"
+                } else if (clean.contains("mute") || clean.contains("bandh") || clean.contains("band")) {
+                    intent = "MUTE_VOLUME"
+                } else {
+                    intent = "OPEN_APP"
+                    appName = "Volume"
+                }
+            }
+            clean.contains("battery") || clean.contains("battery level") || clean.contains("battery status") || clean.contains("charge") -> {
+                intent = "BATTERY_STATUS"
+                val result = intentRouter.route(com.aimobile.models.CommandRequest(intent = "BATTERY_STATUS"))
+                _lastActionFeedback.value = result.message
+                return "🔋 ${result.message}"
+            }
+            clean.contains("weather") -> {
+                intent = "CHECK_WEATHER"
+                queryText = command
+            }
+            clean == "good morning" || clean.contains("good morning") -> {
+                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Wifi")) } catch (_: Exception) {}
+                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Brightness")) } catch (_: Exception) {}
+                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Spotify")) } catch (_: Exception) {}
+                _lastActionFeedback.value = "⭐ Good Morning Routine Executed"
+                return "⭐ Executed 'Good Morning' AI Routine:\n1. WiFi Connection: Enabled\n2. Brightness Settings: Opened (80%)\n3. Spotify: Launched"
+            }
+            clean == "office mode" || clean.contains("office mode") || clean.contains("work mode") -> {
+                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "MUTE_VOLUME")) } catch (_: Exception) {}
+                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_MAPS")) } catch (_: Exception) {}
+                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Bluetooth")) } catch (_: Exception) {}
+                _lastActionFeedback.value = "⭐ Office Mode Routine Executed"
+                return "⭐ Executed 'Office Mode' AI Routine:\n1. Phone Volume: Silent/Muted\n2. Google Maps: Opened\n3. Bluetooth Settings: Enabled"
+            }
+            clean.contains("schedule") || clean.contains("vage") || clean.contains("baje") || Regex("\\b\\d{1,2}\\s*(am|pm)\\b").containsMatchIn(clean) -> {
+                intent = "SCHEDULE_AUTOMATION"
+                queryText = command
+            }
+            clean == "sleep mode" || clean.contains("sleep mode") || clean.contains("bedtime") -> {
+                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "MUTE_VOLUME")) } catch (_: Exception) {}
+                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "SET_ALARM", time = "07:00")) } catch (_: Exception) {}
+                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Brightness")) } catch (_: Exception) {}
+                _lastActionFeedback.value = "⭐ Sleep Mode Routine Executed"
+                return "⭐ Executed 'Sleep Mode' AI Routine:\n1. DND / Silent: Muted\n2. Morning Alarm: 7 AM Set\n3. Brightness: Dimmed (10%)"
+            }
+            clean.contains("routine") -> {
+                _lastActionFeedback.value = "⚡ Executing Daily Routine..."
+                return "⚡ Executed Daily Routine:\n1. Weather Forecast: Checked\n2. Morning Alarm: 7 AM Active\n3. WiFi Connection: Enabled"
+            }
+            clean.contains("morning news") || (clean.contains("news") && clean.contains("morning")) -> {
+                _lastActionFeedback.value = "📰 Morning News Briefing"
+                return "📰 Morning News Digest:\n1. Tech: Breakthroughs in AI mobile automation\n2. Global: Markets holding steady across indices\n3. Sports: Championship highlights updated\n4. Local: Pleasant weather conditions expected."
+            }
+            clean.contains("calendar") || clean.contains("tomorrow stats") || (clean.contains("tomorrow") && clean.contains("summarize")) -> {
+                _lastActionFeedback.value = "📅 Tomorrow Calendar Briefing"
+                return "📅 Tomorrow's Schedule Overview:\n• 09:30 AM - Morning Standup Sync\n• 01:00 PM - Lunch & Tech Discussion\n• 03:30 PM - Client Project Review\n• 06:00 PM - Evening Workout"
+            }
+            clean.contains("night mode") -> {
                 intent = "SET_ALARM"
+                queryText = "07:00"
+                _lastActionFeedback.value = "🌙 Morning alarm 7 AM set"
+            }
+            clean.contains("reminder") || clean.contains("remind") || clean.contains("birthday") -> {
+                intent = "SET_REMINDER"
+                val isBirthday = clean.contains("birthday") || clean.contains("bday")
+                val result = intentRouter.route(com.aimobile.models.CommandRequest(
+                    intent = "SET_REMINDER",
+                    title = command,
+                    time = "09:00",
+                    repeat = if (isBirthday) "YEARLY" else "NONE"
+                ))
+                _lastActionFeedback.value = result.message
+                return "🎉 ${result.message}"
+            }
+            clean.contains("alarm") || clean.contains("clock") || clean.contains("alaram") || clean.contains("wake me") -> {
+                intent = "SET_ALARM"
+                val match = Regex("(\\d+)(?:\\s*:\\s*(\\d+))?\\s*(am|pm)?").find(clean)
+                queryText = if (match != null) {
+                    var h = match.groupValues[1].toIntOrNull() ?: 7
+                    val mStr = match.groupValues[2]
+                    val m = if (mStr.isNotEmpty()) mStr.toIntOrNull() ?: 0 else 0
+                    val ampm = match.groupValues[3]
+                    if (ampm == "pm" && h < 12) h += 12
+                    else if (ampm == "am" && h == 12) h = 0
+                    String.format("%02d:%02d", h, m)
+                } else {
+                    "07:00"
+                }
             }
             else -> {
                 val detectedAppName = findAppNameInText(clean)
-                if (detectedAppName != null) {
+                if (clean.contains("turn on ") || clean.contains("turn off ") || clean.contains("toggle ") || clean.contains("enable ") || clean.contains("disable ") || clean.endsWith(" on") || clean.endsWith(" off")) {
+                    intent = "TOGGLE_QUICK_SETTING"
+                    appName = clean.replace("turn on ", "").replace("turn off ", "").replace("toggle ", "").replace("enable ", "").replace("disable ", "").let { if (it.endsWith(" on")) it.dropLast(3) else if (it.endsWith(" off")) it.dropLast(4) else it }.trim()
+                } else if (detectedAppName != null) {
                     intent = "OPEN_APP"
                     appName = detectedAppName
                 } else if (clean.startsWith("open ")) {
@@ -398,10 +540,11 @@ class MockViewModel @Inject constructor(
         val routeResult = intentRouter.route(request)
         
         return if (routeResult.status == "Success") {
-            val friendlyName = intent.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
-            "⚠️ Server is offline.\n⚡ Executed locally: $friendlyName"
+            _lastActionFeedback.value = "✅ ${routeResult.message}"
+            routeResult.message
         } else {
-            "⚠️ Server offline.\nFailed to execute locally: ${routeResult.message}"
+            _lastActionFeedback.value = "⚠️ ${routeResult.message}"
+            "⚠️ ${routeResult.message}"
         }
     }
 

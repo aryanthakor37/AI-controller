@@ -1,8 +1,10 @@
 package com.aimobile.services
 
+import android.Manifest
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
@@ -10,10 +12,15 @@ import android.view.Gravity
 import android.view.WindowManager
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.ComposeView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.*
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
+import com.aimobile.accessibility.MyAccessibilityService
+import com.aimobile.accessibility.macro.MacroExecutor
+import com.aimobile.accessibility.macro.MacroRecorderManager
+import com.aimobile.data.local.MacroDao
 import com.aimobile.ui.screens.FloatingOverlayContent
 import com.aimobile.voice.repository.VoiceCommandResult
 import com.aimobile.voice.repository.VoiceRepository
@@ -30,15 +37,21 @@ import javax.inject.Inject
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import androidx.core.content.ContextCompat
-import android.content.pm.PackageManager
-import android.Manifest
 
 @AndroidEntryPoint
 class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     @Inject
     lateinit var repository: VoiceRepository
+
+    @Inject
+    lateinit var macroDao: MacroDao
+
+    @Inject
+    lateinit var macroRecorderManager: MacroRecorderManager
+
+    @Inject
+    lateinit var macroExecutor: MacroExecutor
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     private val store = ViewModelStore()
@@ -56,10 +69,12 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
     private lateinit var ttsManager: TTSManager
     private val serviceScope = CoroutineScope(Dispatchers.Main)
 
-    // States for Compose UI
+    // Compose State Holders
     private var voiceState by mutableStateOf<VoiceState>(VoiceState.Idle)
     private var transcript by mutableStateOf("")
     private var aiResponse by mutableStateOf("")
+    private var isRecordingMacro by mutableStateOf(false)
+    private var macroStepCount by mutableStateOf(0)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -70,6 +85,9 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
 
         speechRecognitionManager = SpeechRecognitionManager(this)
         ttsManager = TTSManager(this)
+
+        // Wire accessibility service instance to recorder manager
+        MyAccessibilityService.instance?.macroRecorderManager = macroRecorderManager
 
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         composeView = ComposeView(this)
@@ -85,9 +103,8 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
                 WindowManager.LayoutParams.TYPE_PHONE
             },
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -95,7 +112,6 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
             y = 300
         }
 
-        // Set owner components on the view so Compose can compile correctly
         composeView.setViewTreeLifecycleOwner(this)
         composeView.setViewTreeViewModelStoreOwner(this)
         composeView.setViewTreeSavedStateRegistryOwner(this)
@@ -105,8 +121,12 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
                 voiceState = voiceState,
                 transcript = transcript,
                 aiResponse = aiResponse,
+                isRecordingMacro = isRecordingMacro,
+                macroRecordedStepCount = macroStepCount,
                 onMicClick = { toggleListening() },
                 onSendText = { processTextCommand(it) },
+                onRecordMacroClick = { toggleMacroRecording() },
+                onCancelClick = { cancelActiveTasks() },
                 onDrag = { dx, dy -> updatePosition(dx, dy) },
                 onCloseClick = { stopSelf() },
                 onExpandToggle = { expanded -> toggleFocus(expanded) }
@@ -114,8 +134,11 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
         }
 
         observeSpeechRecognition()
+        observeMacroRecorder()
         observeActivePackage()
     }
+
+
 
     private fun observeSpeechRecognition() {
         serviceScope.launch {
@@ -147,11 +170,23 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
         }
     }
 
+    private fun observeMacroRecorder() {
+        serviceScope.launch {
+            macroRecorderManager.isRecording.collectLatest { recording ->
+                isRecordingMacro = recording
+            }
+        }
+        serviceScope.launch {
+            macroRecorderManager.recordedSteps.collectLatest { steps ->
+                macroStepCount = steps.size
+            }
+        }
+    }
+
     private fun toggleListening() {
         if (voiceState == VoiceState.Listening) {
             speechRecognitionManager.stopListening()
         } else {
-            // Verify permission
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                 voiceState = VoiceState.PermissionDenied
                 ttsManager.speak("Microphone permission is required to listen.")
@@ -165,10 +200,70 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
         }
     }
 
+    private fun toggleMacroRecording() {
+        serviceScope.launch {
+            if (macroRecorderManager.isRecording.value) {
+                val savedMacro = macroRecorderManager.stopRecording()
+                if (savedMacro != null) {
+                    aiResponse = "Saved macro: '${savedMacro.name}' (${savedMacro.id})"
+                    ttsManager.speak("Saved macro ${savedMacro.name}")
+                } else {
+                    aiResponse = "Macro recording cancelled (no steps recorded)"
+                    ttsManager.speak("No actions were recorded.")
+                }
+            } else {
+                val name = "Macro ${System.currentTimeMillis() / 1000}"
+                macroRecorderManager.startRecording(name)
+                aiResponse = "Recording macro '$name'... Perform actions now!"
+                ttsManager.speak("Recording macro started. Perform your actions on screen now.")
+            }
+        }
+    }
+
+    private fun cancelActiveTasks() {
+        if (voiceState == VoiceState.Listening) {
+            speechRecognitionManager.stopListening()
+            voiceState = VoiceState.Idle
+            aiResponse = "Listening stopped."
+        } else if (macroRecorderManager.isRecording.value) {
+            serviceScope.launch {
+                macroRecorderManager.stopRecording()
+                aiResponse = "Recording stopped."
+            }
+        } else {
+            voiceState = VoiceState.Idle
+            aiResponse = "Cancelled action."
+        }
+    }
+
     private fun processTextCommand(text: String) {
         voiceState = VoiceState.Thinking
         serviceScope.launch {
             try {
+                // 1. First check if a saved local macro matches the trigger text
+                val query = "%${text.trim().lowercase()}%"
+                val matchedMacro = macroDao.findMacroByTrigger(text) ?: macroDao.searchMacro(query)
+                if (matchedMacro != null) {
+                    voiceState = VoiceState.Executing("PLAY_MACRO")
+                    aiResponse = "Playing macro: '${matchedMacro.name}'"
+                    ttsManager.speak("Executing macro ${matchedMacro.name}")
+
+                    val ok = macroExecutor.executeMacro(this@FloatingOverlayService, matchedMacro) { current, total, status ->
+                        aiResponse = "Step $current/$total: $status"
+                    }
+
+                    if (ok) {
+                        aiResponse = "Finished macro '${matchedMacro.name}'"
+                        voiceState = VoiceState.Completed("Macro finished")
+                        ttsManager.speak("Macro execution complete")
+                    } else {
+                        aiResponse = "Failed to complete macro '${matchedMacro.name}'"
+                        voiceState = VoiceState.Failed("Macro error")
+                    }
+                    return@launch
+                }
+
+                // 2. If no local macro matches, dispatch to AI voice repository
                 when (val result = repository.sendVoiceCommand(text)) {
                     is VoiceCommandResult.Success -> {
                         voiceState = VoiceState.Executing(result.intent)
@@ -184,7 +279,6 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
                         voiceState = VoiceState.Completed(speakText)
                         ttsManager.speak(speakText)
 
-                        // Fail-safe: Hide the overlay if it successfully opened an app/intent
                         if (execResult.status == "Success" && (
                             result.intent.startsWith("OPEN_") ||
                             result.intent.startsWith("SEARCH_") ||
@@ -232,34 +326,10 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
         }
     }
 
-    private fun getLauncherPackages(context: Context): List<String> {
-        val intent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_HOME)
-        }
-        val resolveInfos = context.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
-        val list = resolveInfos.map { it.activityInfo.packageName }.toMutableList()
-        // Standard fallbacks for system launchers just in case
-        list.add("com.android.launcher")
-        list.add("com.android.launcher3")
-        list.add("com.google.android.apps.nexuslauncher")
-        list.add("com.sec.android.app.launcher")
-        list.add("com.bbk.launcher2")
-        list.add("com.vivo.launcher")
-        return list.distinct()
-    }
-
     private fun observeActivePackage() {
         serviceScope.launch {
-            val launcherPkgs = getLauncherPackages(this@FloatingOverlayService)
-            com.aimobile.accessibility.MyAccessibilityService.currentActivePackageFlow.collectLatest { pkg ->
-                val isAccessibilityEnabled = com.aimobile.accessibility.MyAccessibilityService.isServiceEnabled.value
-                val isHome = !isAccessibilityEnabled || pkg in launcherPkgs || pkg.isEmpty()
-
-                if (isHome) {
-                    showOverlayView()
-                } else {
-                    hideOverlayView()
-                }
+            MyAccessibilityService.currentActivePackageFlow.collectLatest { _ ->
+                showOverlayView()
             }
         }
     }
@@ -295,6 +365,7 @@ class FloatingOverlayService : Service(), LifecycleOwner, ViewModelStoreOwner, S
     override fun onDestroy() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         hideOverlayView()
+
         speechRecognitionManager.destroy()
         ttsManager.destroy()
         serviceScope.cancel()

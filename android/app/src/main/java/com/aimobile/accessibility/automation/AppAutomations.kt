@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.view.accessibility.AccessibilityNodeInfo
 import com.aimobile.models.CommandResult
 import kotlinx.coroutines.delay
 
@@ -145,6 +146,78 @@ object AppAutomations {
         }
     }
 
+    suspend fun runGeneralAppSearchAutomation(service: AccessibilityService?, context: Context, packageName: String, query: String, appName: String): CommandResult {
+        AutomationManager.addLog("Starting general search automation for $appName: $query")
+        return try {
+            val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+            if (intent != null) {
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
+                
+                if (service != null) {
+                    delay(2000) // Wait for app to load
+                    
+                    // Try to click search icon/button
+                    var clicked = AutomationManager.clickNodeByContentDescription(service, "search", 2)
+                    if (!clicked) clicked = AutomationManager.clickNodeByContentDescription(service, "Search", 1)
+                    if (!clicked) clicked = AutomationManager.clickNodeByText(service, "Search", 1)
+                    if (!clicked) clicked = AutomationManager.clickNodeByText(service, "search", 1)
+                    if (!clicked) clicked = AutomationManager.clickNodeByText(service, "Search in emails", 1)
+                    
+                    if (clicked) {
+                        delay(1000)
+                    }
+                    
+                    // 1. Try focused input node
+                    val inputSuccess = AutomationManager.findAndInputText(service, query, 2)
+                    if (inputSuccess) {
+                        return CommandResult("Success", "Searching in $appName for: $query")
+                    }
+                    
+                    // 2. Try manually finding any EditText or Editable node
+                    val root = service.rootInActiveWindow
+                    if (root != null) {
+                        val searchNode = findAnyEditTextNode(root)
+                        if (searchNode != null) {
+                            AutomationManager.addLog("Found an editable node as fallback, setting text.")
+                            val args = android.os.Bundle().apply {
+                                putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, query)
+                            }
+                            searchNode.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+                            
+                            // Optional: some apps require click to submit search
+                            searchNode.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+                            
+                            return CommandResult("Success", "Searching in $appName for: $query")
+                        }
+                    }
+                    
+                    CommandResult("Success", "Opened $appName (Could not auto-type search)")
+                } else {
+                    CommandResult("Success", "Opened $appName (Enable Accessibility for auto-search)")
+                }
+            } else {
+                CommandResult("Failed", "App not found: $appName")
+            }
+        } catch (e: Exception) {
+            CommandResult("Failed", "Error searching in $appName: ${e.message}")
+        }
+    }
+
+    private fun findAnyEditTextNode(root: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
+        if (root == null) return null
+        
+        if (root.isEditable || root.className?.toString()?.contains("EditText") == true || root.className?.toString()?.contains("AutoCompleteTextView") == true) {
+            return root
+        }
+        for (i in 0 until root.childCount) {
+            val child = root.getChild(i) ?: continue
+            val found = findAnyEditTextNode(child)
+            if (found != null) return found
+        }
+        return null
+    }
+
     suspend fun runInstagramAutomation(service: AccessibilityService?, context: Context, query: String): CommandResult {
         AutomationManager.addLog("Starting Instagram automation for: $query")
         return try {
@@ -157,6 +230,211 @@ object AppAutomations {
             CommandResult("Success", "Opening Instagram profile: $cleanQuery")
         } catch (e: Exception) {
             CommandResult("Failed", "Instagram not installed or error: ${e.message}")
+        }
+    }
+
+    suspend fun runWifiToggleAutomation(service: AccessibilityService?, context: Context, turnOn: Boolean): CommandResult {
+        AutomationManager.addLog("Starting Wi-Fi toggle automation to: $turnOn")
+        return try {
+            val intent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                Intent(android.provider.Settings.Panel.ACTION_WIFI).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            } else {
+                Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            }
+            context.startActivity(intent)
+            delay(1000)
+
+            if (service != null) {
+                val toggled = AutomationManager.toggleSwitch(service, turnOn)
+                if (toggled) {
+                    CommandResult("Success", "Wi-Fi turned ${if (turnOn) "ON" else "OFF"} automatically")
+                } else {
+                    CommandResult("Success", "Opened Wi-Fi settings (Auto-click switch)")
+                }
+            } else {
+                CommandResult("Success", "Opened Wi-Fi settings (Enable Accessibility Service in Settings for auto-click)")
+            }
+        } catch (e: Exception) {
+            CommandResult("Failed", "Could not toggle Wi-Fi: ${e.message}")
+        }
+    }
+
+    suspend fun runBluetoothToggleAutomation(service: AccessibilityService?, context: Context, turnOn: Boolean): CommandResult {
+        AutomationManager.addLog("Starting Bluetooth toggle automation to: $turnOn")
+        return try {
+            val intent = Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            delay(1000)
+
+            if (service != null) {
+                val toggled = AutomationManager.toggleSwitch(service, turnOn)
+                if (toggled) {
+                    CommandResult("Success", "Bluetooth turned ${if (turnOn) "ON" else "OFF"} automatically")
+                } else {
+                    CommandResult("Success", "Opened Bluetooth settings (Auto-click switch)")
+                }
+            } else {
+                CommandResult("Success", "Opened Bluetooth settings (Enable Accessibility Service in Settings for auto-click)")
+            }
+        } catch (e: Exception) {
+            CommandResult("Failed", "Could not toggle Bluetooth: ${e.message}")
+        }
+    }
+
+    suspend fun runQuickSettingToggle(service: AccessibilityService?, context: Context, tileName: String): CommandResult {
+        if (service == null) {
+            return CommandResult("Failed", "Accessibility Service disabled (Cannot open Quick Settings).")
+        }
+        
+        AutomationManager.addLog("Opening Quick Settings to toggle: $tileName")
+        val opened = service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)
+        if (!opened) return CommandResult("Failed", "Could not open Quick Settings.")
+        
+        delay(1000) // Wait for panel to drop down
+
+        var clicked = false
+        // Try finding it on current page, if not, swipe and try again
+        for (page in 0..2) {
+            clicked = AutomationManager.clickNodeByText(service, tileName, 1)
+            if (!clicked) {
+                clicked = AutomationManager.clickNodeByContentDescription(service, tileName, 1)
+            }
+            if (clicked) break
+            
+            // Swipe right (scroll to next page in quick settings)
+            AutomationManager.performHorizontalScrollGesture(service, true)
+            delay(500)
+        }
+
+        // Close panel
+        delay(500)
+        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+
+        return if (clicked) {
+            CommandResult("Success", "Toggled $tileName in Quick Settings")
+        } else {
+            CommandResult("Failed", "Could not find $tileName in Quick Settings")
+        }
+    }
+
+    suspend fun runDarkModeToggleAutomation(service: AccessibilityService?, context: Context, turnOn: Boolean): CommandResult {
+        AutomationManager.addLog("Starting Dark Mode toggle automation to: $turnOn")
+        return try {
+            val intent = Intent(android.provider.Settings.ACTION_DISPLAY_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            delay(1000)
+
+            if (service != null) {
+                val toggled = AutomationManager.toggleSwitch(service, turnOn, targetKeyword = "dark")
+                if (toggled) {
+                    CommandResult("Success", "Dark Mode turned ${if (turnOn) "ON" else "OFF"} automatically")
+                } else {
+                    CommandResult("Success", "Opened Display Settings (Auto-click Dark Mode switch)")
+                }
+            } else {
+                CommandResult("Success", "Opened Display Settings (Enable Accessibility Service in Settings for auto-click)")
+            }
+        } catch (e: Exception) {
+            CommandResult("Failed", "Could not toggle Dark Mode: ${e.message}")
+        }
+    }
+
+    fun setBrightness(context: Context, percentage: Int): CommandResult {
+        return try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                if (!android.provider.Settings.System.canWrite(context)) {
+                    val intent = Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                        data = android.net.Uri.parse("package:" + context.packageName)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                    return CommandResult("Failed", "Please grant 'Modify system settings' permission to allow brightness control.")
+                }
+            }
+            // Max brightness is usually 255
+            val brightnessValue = (255 * (percentage / 100f)).toInt().coerceIn(0, 255)
+            
+            // Turn off auto-brightness first
+            android.provider.Settings.System.putInt(
+                context.contentResolver,
+                android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
+                android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+            )
+            
+            // Set brightness
+            android.provider.Settings.System.putInt(
+                context.contentResolver,
+                android.provider.Settings.System.SCREEN_BRIGHTNESS,
+                brightnessValue
+            )
+            CommandResult("Success", "Set brightness to $percentage%")
+        } catch (e: Exception) {
+            CommandResult("Failed", "Could not set brightness: ${e.message}")
+        }
+    }
+
+    fun openApp(context: Context, packageName: String): Boolean {
+        return try {
+            val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return false
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            Log.e("AppAutomations", "Failed to open package $packageName: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun runCameraSelfieAutomation(service: AccessibilityService?, context: Context): CommandResult {
+        return try {
+            val intent = Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            context.startActivity(intent)
+
+            if (service != null) {
+                delay(1500) // Wait for camera to open
+                
+                // Try to switch to front camera
+                val switched = AutomationManager.clickNodeByContentDescription(service, "Switch camera", 2) || 
+                               AutomationManager.clickNodeByContentDescription(service, "Front camera", 1) ||
+                               AutomationManager.clickNodeByContentDescription(service, "Flip camera", 1) ||
+                               AutomationManager.clickNodeByContentDescription(service, "switch", 1)
+                
+                if (switched) {
+                    delay(1000) // Wait for lens to switch
+                }
+                
+                // Click shutter
+                var captured = AutomationManager.clickNodeByContentDescription(service, "Shutter", 2) ||
+                               AutomationManager.clickNodeByContentDescription(service, "Take photo", 1) ||
+                               AutomationManager.clickNodeByContentDescription(service, "Capture", 1) ||
+                               AutomationManager.clickNodeByText(service, "Capture", 1)
+                               
+                if (!captured) {
+                    val metrics = context.resources.displayMetrics
+                    val x = metrics.widthPixels / 2f
+                    val y = metrics.heightPixels * 0.88f
+                    captured = AutomationManager.performTap(service, x, y)
+                }
+                               
+                if (captured) {
+                    CommandResult("Success", "📸 Selfie captured automatically!")
+                } else {
+                    CommandResult("Success", "Opened Camera, but couldn't auto-click shutter.")
+                }
+            } else {
+                CommandResult("Success", "Opened Camera.")
+            }
+        } catch (e: Exception) {
+            CommandResult("Failed", "Could not open Camera: ${e.message}")
         }
     }
 }

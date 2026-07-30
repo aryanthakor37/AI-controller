@@ -39,7 +39,7 @@ fun AppNavigation() {
             LoginScreen(
                 onLoginSuccess = {
                     navController.navigate("main") {
-                        popUpTo("login") { inclusive = true }
+                        popUpTo("splash") { inclusive = true }
                     }
                 },
                 onNavigateToRegister = { navController.navigate("register") },
@@ -52,7 +52,7 @@ fun AppNavigation() {
             RegisterScreen(
                 onRegisterSuccess = {
                     navController.navigate("main") {
-                        popUpTo("login") { inclusive = true }
+                        popUpTo("splash") { inclusive = true }
                     }
                 },
                 onNavigateToLogin = { navController.popBackStack() },

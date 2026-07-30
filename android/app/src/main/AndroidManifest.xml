@@ -26,22 +26,31 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     
     <!-- Battery & WakeLock -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
 
     <!-- Alarms & Timers -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     
     <!-- Overlay drawing -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
 
     <queries>
         <package android:name="com.google.android.youtube" />
         <package android:name="com.spotify.music" />
         <package android:name="com.whatsapp" />
         <package android:name="com.android.chrome" />
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
     <application
@@ -49,9 +58,9 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@drawable/app_launcher_icon"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/app_launcher_icon"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AiMobileControlAgent"
@@ -71,7 +80,7 @@
         <service
             android:name=".services.MainService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="dataSync|microphone" />
 
         <service
             android:name=".services.FloatingOverlayService"
@@ -87,6 +96,166 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Independent Home Screen Widgets & Command Receiver -->
+        <receiver
+            android:name=".widget.WidgetCommandReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.aimobile.widget.ACTION_EXECUTE_COMMAND" />
+                <action android:name="com.aimobile.widget.ACTION_LAUNCH_APP" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Widget 1: AI Assistant Widget -->
+        <receiver
+            android:name=".widget.AiAssistantWidgetProvider"
+            android:label="AI Assistant"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_ai_assistant_info" />
+        </receiver>
+
+        <!-- Widget 2: Quick Commands Widget -->
+        <receiver
+            android:name=".widget.QuickCommandsWidgetProvider"
+            android:label="Quick Commands"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_commands_info" />
+        </receiver>
+
+        <!-- Widget 3: Voice Widget -->
+        <receiver
+            android:name=".widget.VoiceWidgetProvider"
+            android:label="Voice AI"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_voice_info" />
+        </receiver>
+
+        <!-- Widget 4: Device Status Widget -->
+        <receiver
+            android:name=".widget.DeviceStatusWidgetProvider"
+            android:label="Device Status"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_device_status_info" />
+        </receiver>
+
+        <!-- Widget 5: Recent Commands Widget -->
+        <receiver
+            android:name=".widget.RecentCommandsWidgetProvider"
+            android:label="Recent Commands"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_recent_commands_info" />
+        </receiver>
+
+        <!-- Auto Restart Service Receiver on Boot -->
+        <receiver
+            android:name=".receivers.BootCompletedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Birthday & Special Event Reminder Receiver -->
+        <receiver
+            android:name=".receivers.ReminderReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.aimobile.ACTION_TRIGGER_REMINDER" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Time Automation Receiver -->
+        <receiver
+            android:name=".handlers.TimeAutomationReceiver"
+            android:exported="false" />
+
+
+        <!-- Quick Settings Tile 1: AI Assistant -->
+        <service
+            android:name=".tiles.AiAssistantTileService"
+            android:icon="@drawable/app_launcher_icon"
+            android:label="AI Assistant"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Quick Settings Tile 2: Voice Assistant -->
+        <service
+            android:name=".tiles.VoiceAssistantTileService"
+            android:icon="@drawable/app_launcher_icon"
+            android:label="Voice AI"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Quick Settings Tile 3: Flashlight -->
+        <service
+            android:name=".tiles.FlashlightTileService"
+            android:icon="@drawable/app_launcher_icon"
+            android:label="Flashlight"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Quick Settings Tile 4: AI Chat -->
+        <service
+            android:name=".tiles.AiChatTileService"
+            android:icon="@drawable/app_launcher_icon"
+            android:label="AI Chat"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Quick Settings Tile 5: Recent Command -->
+        <service
+            android:name=".tiles.RecentCommandTileService"
+            android:icon="@drawable/app_launcher_icon"
+            android:label="Recent Command"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
         </service>
 
     </application>

@@ -12,36 +12,47 @@ class SocketService {
   connect() {
     if (this.socket && this.socket.connected) return;
 
+    const token = localStorage.getItem('token');
+    const state = store.getState();
+    const settings = state.settings || {};
+    const autoReconnect = settings.autoReconnectSocket !== false;
+    const debug = settings.debugLogging === true;
+
     this.socket = io(this.url, {
+      auth: { token },
+      query: { token },
       transports: ['websocket', 'polling'],
-      reconnection: true,
+      reconnection: autoReconnect,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: Infinity
+      reconnectionAttempts: autoReconnect ? Infinity : 0
     });
 
     this.socket.on('connect', () => {
-      console.log('[SocketService] Connected to Backend Socket.IO Server');
+      if (debug) console.log('[SocketService Debug] Connected to Backend Socket.IO Server:', this.socket.id);
       this.socket.emit('dashboard:request_devices');
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log(`[SocketService] Disconnected: ${reason}`);
+      if (debug) console.log(`[SocketService Debug] Disconnected: ${reason}`);
     });
 
-    // Listen for full device list updates (Registrations / Disconnects)
     this.socket.on('dashboard:devices_update', (devices) => {
+      if (debug) console.log('[SocketService Debug] Devices Update Payload:', devices);
       store.dispatch(setDevices(devices));
     });
 
-    // Listen for high-frequency telemetry (Ping / Heartbeat updates)
     this.socket.on('dashboard:device_telemetry', (telemetryData) => {
+      if (debug) console.log('[SocketService Debug] Telemetry Event:', telemetryData);
       store.dispatch(updateDeviceTelemetry(telemetryData));
     });
   }
 
   sendCommand(deviceId, commandPayload) {
     if (this.socket) {
+      const state = store.getState();
+      const settings = state.settings || {};
+      if (settings.debugLogging) console.log('[SocketService Debug] Transmitting Command Payload:', { deviceId, commandPayload });
       this.socket.emit('dashboard:send_command', { deviceId, command: commandPayload });
     }
   }

@@ -17,12 +17,18 @@ SUPPORTED INTENTS (You MUST use one of these exact strings):
 - FLASHLIGHT_OFF
 - SET_ALARM (requires: time in strict 24-hour HH:MM format, e.g., "05:00" for 5 AM, "17:30" for 5:30 PM)
 - SET_TIMER (requires: duration as an integer representing total seconds)
+- SET_REMINDER (requires: title - reminder description e.g. "Friend's Birthday" or "Team Meeting", date - YYYY-MM-DD format if mentioned, time - 24-hr HH:MM format if mentioned, repeat - "YEARLY" for birthdays or "NONE", contact - optional contact name)
 - INCREASE_VOLUME
 - DECREASE_VOLUME
 - BATTERY_STATUS
 - DEVICE_INFO
 - READ_NOTIFICATIONS
 - SEARCH_APP (requires: app - name of the app to search in, query - the search query)
+- CHECK_WEATHER (requires: reply - weather forecast information like temperature, condition, humidity)
+- SUMMARIZE_SCREEN (use when user wants to read or summarize what is currently visible on their screen)
+- EXECUTE_ROUTINE (requires: routine - trigger phrase or name of routine to execute like "good night", "study mode", "work mode")
+- EMERGENCY_SOS (requires: action - "TRIGGER" or "CANCEL")
+- GENERAL_CHAT (requires: reply - conversational response, news summary, facts, or helpful information)
 - UNKNOWN_COMMAND (use when you don't understand the command or it falls outside the scope)
 
 OUTPUT RULES:
@@ -62,6 +68,15 @@ User: "Search react tutorial in Chrome"
 User: "Search pizza on Maps"
 {"intent": "SEARCH_APP", "app": "Maps", "query": "pizza", "confidence": 0.99}
 
+User: "give me direction for the palanpur to deesa in map"
+{"intent": "GET_DIRECTIONS", "origin": "Palanpur", "destination": "Deesa", "query": "Palanpur to Deesa", "confidence": 0.99}
+
+User: "directions to Deesa from Palanpur"
+{"intent": "GET_DIRECTIONS", "origin": "Palanpur", "destination": "Deesa", "query": "Palanpur to Deesa", "confidence": 0.99}
+
+User: "directions to Deesa"
+{"intent": "GET_DIRECTIONS", "destination": "Deesa", "query": "Deesa", "confidence": 0.98}
+
 User: "search minecraft in Play Store"
 {"intent": "SEARCH_APP", "app": "Play Store", "query": "minecraft", "confidence": 0.99}
 
@@ -86,8 +101,26 @@ User: "Wake me up at 5 PM"
 User: "Open WhatsApp"
 {"intent": "OPEN_APP", "app": "WhatsApp", "confidence": 0.95}
 
+User: "What is the weather today?"
+{"intent": "CHECK_WEATHER", "reply": "🌤️ Today's weather forecast: 28°C, Mostly Sunny with a light breeze. High of 31°C, Low of 22°C.", "confidence": 0.99}
+
+User: "Summarize morning news"
+{"intent": "GENERAL_CHAT", "reply": "📰 Morning News Summary:\n1. Tech: AI agent updates launched globally.\n2. Business: Markets steady.\n3. Sports: Cup updates.", "confidence": 0.98}
+
 User: "What's the meaning of life?"
-{"intent": "UNKNOWN_COMMAND", "confidence": 1.0}
+{"intent": "GENERAL_CHAT", "reply": "The meaning of life is a philosophical question about the purpose and significance of human existence.", "confidence": 0.95}
+
+User: "What is the battery level?"
+{"intent": "BATTERY_STATUS", "confidence": 0.99}
+
+User: "Check battery percentage"
+{"intent": "BATTERY_STATUS", "confidence": 0.98}
+
+User: "Remind me for Alex's birthday on 2026-10-20 at 10 AM"
+{"intent": "SET_REMINDER", "title": "Alex's Birthday", "date": "2026-10-20", "time": "10:00", "repeat": "YEARLY", "contact": "Alex", "confidence": 0.98}
+
+User: "Set reminder for doctor appointment tomorrow at 4 PM"
+{"intent": "SET_REMINDER", "title": "Doctor Appointment", "time": "16:00", "repeat": "NONE", "confidence": 0.97}
 `;
 
 module.exports = {

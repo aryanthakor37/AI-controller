@@ -14,7 +14,7 @@ const getOrCreateSession = (req) => {
 };
 
 const parseCommand = async (req, res) => {
-  const { command } = req.body;
+  const { command, options } = req.body;
   if (!command) {
     return res.status(400).json({ error: 'Command is required' });
   }
@@ -23,7 +23,7 @@ const parseCommand = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    const aiResult = await processCommand(command, sessionId);
+    const aiResult = await processCommand(command, sessionId, options || {});
     const executionTimeMs = Date.now() - startTime;
 
     // Save conversation context
@@ -34,11 +34,75 @@ const parseCommand = async (req, res) => {
       addMessage(sessionId, 'model', `[Intent Executed: ${aiResult.data.intent}]`);
     }
 
+    const intent = aiResult.data?.intent || 'UNKNOWN_COMMAND';
+    const status = aiResult.success ? 'Success' : 'Failed';
+
+    // Auto-create real database Reminder if intent is SET_REMINDER, REMINDER, or SET_ALARM
+    if (aiResult.success && (intent === 'SET_REMINDER' || intent === 'REMINDER' || intent === 'SET_ALARM')) {
+      try {
+        const Reminder = require('../models/Reminder');
+        const title = aiResult.data.title || aiResult.data.event || command;
+        const date = aiResult.data.date || new Date().toISOString().split('T')[0];
+        const time = aiResult.data.time || '09:00';
+        const isBirthday = title.toLowerCase().includes('birthday') || command.toLowerCase().includes('birthday');
+        const repeat = aiResult.data.repeat || (isBirthday ? 'YEARLY' : 'NONE');
+        const contact = aiResult.data.contact || '';
+        const deviceId = req.headers['x-device-id'] || 'default-device';
+
+        const createdReminder = await Reminder.create({
+          user: req.user ? req.user._id : null,
+          deviceId,
+          title,
+          date,
+          time,
+          repeat,
+          contact
+        });
+        aiResult.data.savedReminder = createdReminder;
+        console.log(`[AI Controller] Auto-created database reminder: "${title}" on ${date} at ${time}`);
+      } catch (remErr) {
+        console.error('Failed to auto-create Reminder from AI intent:', remErr.message);
+      }
+    }
+
+    // Auto-execute routine if intent is EXECUTE_ROUTINE or EMERGENCY_SOS
+    if (aiResult.success && (intent === 'EXECUTE_ROUTINE' || intent === 'EMERGENCY_SOS')) {
+      try {
+        const Routine = require('../models/Routine');
+        const { getIo } = require('../services/socket/socketManager');
+        const triggerPhrase = intent === 'EMERGENCY_SOS' ? 'emergency sos' : (aiResult.data.routine || command).toLowerCase().trim();
+        
+        const routine = await Routine.findOne({
+          $or: [
+            { triggerPhrase },
+            { title: new RegExp(triggerPhrase, 'i') }
+          ]
+        });
+
+        if (routine) {
+          const io = getIo();
+          routine.actions.forEach((action, index) => {
+            setTimeout(() => {
+              io.emit('command:execute', {
+                intent: action.intent,
+                ...action.args,
+                routineTitle: routine.title,
+                step: index + 1,
+                totalSteps: routine.actions.length
+              });
+            }, index * (action.delayMs || 500));
+          });
+          aiResult.data.executedRoutine = routine.title;
+          aiResult.data.reply = `🚀 Executing Routine: "${routine.title}" (${routine.actions.length} steps)`;
+          console.log(`[AI Controller] Auto-executed routine: "${routine.title}"`);
+        }
+      } catch (routErr) {
+        console.error('Failed to auto-execute routine:', routErr.message);
+      }
+    }
+
     // Save history logs and update memory stats in MongoDB
     if (req.user) {
-      const intent = aiResult.data?.intent || 'UNKNOWN_COMMAND';
-      const status = aiResult.success ? 'Success' : 'Failed';
-      
       // Log to History
       await History.create({
         user: req.user._id,

@@ -8,6 +8,7 @@ import voiceReducer from './slices/voiceSlice';
 import speechReducer from './slices/speechSlice';
 import conversationReducer from './slices/conversationSlice';
 import settingsReducer from './slices/settingsSlice';
+import reminderReducer from './slices/reminderSlice';
 
 export const store = configureStore({
   reducer: {
@@ -20,6 +21,7 @@ export const store = configureStore({
     speech: speechReducer,
     conversation: conversationReducer,
     settings: settingsReducer,
+    reminders: reminderReducer,
   },
   devTools: process.env.NODE_ENV !== 'production',
 });

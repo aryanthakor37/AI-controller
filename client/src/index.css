@@ -43,3 +43,28 @@
     @apply bg-white/20;
   }
 }
+
+/* Functional Settings Themes & Modes */
+html.theme-oled body {
+  background-color: #000000 !important;
+  background-image: none !important;
+}
+
+html.theme-cyberpunk body {
+  background-color: #090014 !important;
+  background-image: radial-gradient(circle at 50% 0%, rgba(236, 72, 153, 0.15), transparent 70%), radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15), transparent 70%) !important;
+}
+
+html.no-glow .glass, 
+html.no-glow .glass-card {
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html.compact-view .space-y-6 > * + * {
+  margin-top: 1rem !important;
+}
+
+html.compact-view p {
+  line-height: 1.25 !important;
+}

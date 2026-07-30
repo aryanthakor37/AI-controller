@@ -22,10 +22,14 @@ const getGeminiClient = () => {
   });
 };
 
-const processCommand = async (command, sessionId) => {
+const processCommand = async (command, sessionId, options = {}) => {
   const startTime = Date.now();
   let prompt = "";
   let rawText = "";
+
+  const selectedModel = options.model || "gemini-flash-lite-latest";
+  const contextWindow = typeof options.contextWindow === 'number' ? options.contextWindow : 5;
+  const minConfidence = typeof options.confidenceThreshold === 'number' ? options.confidenceThreshold : 0.7;
 
   let ai;
   try {
@@ -35,20 +39,19 @@ const processCommand = async (command, sessionId) => {
     return { success: false, error: error.message, data: { intent: "UNKNOWN_COMMAND", confidence: 0, error: "Client initialization failed" } };
   }
 
-  const contextStr = formatContextForPrompt(sessionId);
+  const contextStr = formatContextForPrompt(sessionId, contextWindow);
   prompt = `${INTENT_SCHEMA}\n\n${contextStr}User: "${command}"`;
 
   // 1. GENERATE CONTENT
   let response;
   try {
     response = await ai.models.generateContent({
-      model: "gemini-flash-lite-latest",
+      model: selectedModel,
       contents: prompt,
     });
     rawText = response.text || "";
   } catch (error) {
     const executionTimeMs = Date.now() - startTime;
-    // Extract deep error properties for @google/genai
     const errorDetails = {
       message: error.message,
       status: error.status,
@@ -73,6 +76,10 @@ const processCommand = async (command, sessionId) => {
   let finalIntentData;
   try {
     finalIntentData = validateCommand(parsedJson);
+    if (finalIntentData.confidence < minConfidence && finalIntentData.intent !== 'GENERAL_CHAT') {
+      finalIntentData.lowConfidence = true;
+      finalIntentData.requiredThreshold = minConfidence;
+    }
   } catch (error) {
     logAiError("Failed to validate command", { error: error.message, parsedJson });
     return { success: false, error: "Validation threw an exception", data: { intent: "UNKNOWN_COMMAND", confidence: 0, error: "Validation failed" } };
@@ -86,6 +93,7 @@ const processCommand = async (command, sessionId) => {
     finalIntent: finalIntentData.intent,
     confidence: finalIntentData.confidence,
     executionTimeMs,
+    modelUsed: selectedModel
   });
 
   return {

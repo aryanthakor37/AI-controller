@@ -65,7 +65,8 @@ data class ChatData(
     val time: String? = null,
     val duration: String? = null,
     val app: String? = null,
-    val query: String? = null
+    val query: String? = null,
+    val steps: List<com.aimobile.data.local.MacroStep>? = null
 )
 
 // ===== API Interface =====
@@ -134,15 +135,15 @@ interface ApiService {
 // ===== Cloud Sync Request/Response Models =====
 data class HistoryItem(
     val _id: String,
-    val deviceId: String?,
-    val deviceName: String?,
-    val command: String?,
-    val intent: String?,
-    val status: String?,
-    val executionTimeMs: Int,
-    val errorMessage: String?,
-    val createdAt: String,
-    val updatedAt: String
+    val deviceId: String? = "dev_local",
+    val deviceName: String? = "Vivo V2250",
+    val command: String? = null,
+    val intent: String? = null,
+    val status: String? = "Completed",
+    val executionTimeMs: Int = 120,
+    val errorMessage: String? = null,
+    val createdAt: String = "",
+    val updatedAt: String = ""
 )
 
 data class PopularIntent(

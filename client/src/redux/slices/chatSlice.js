@@ -13,11 +13,14 @@ export const chatSlice = createSlice({
     addMessage: (state, action) => {
       state.messages.push(action.payload);
     },
+    clearMessages: (state) => {
+      state.messages = [];
+    },
     setTyping: (state, action) => {
       state.isTyping = action.payload;
     },
   },
 });
 
-export const { addMessage, setTyping } = chatSlice.actions;
+export const { addMessage, clearMessages, setTyping } = chatSlice.actions;
 export default chatSlice.reducer;
