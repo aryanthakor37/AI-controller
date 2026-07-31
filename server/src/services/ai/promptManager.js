@@ -20,7 +20,10 @@ SUPPORTED INTENTS (You MUST use one of these exact strings):
 - SET_REMINDER (requires: title - reminder description e.g. "Friend's Birthday" or "Team Meeting", date - YYYY-MM-DD format if mentioned, time - 24-hr HH:MM format if mentioned, repeat - "YEARLY" for birthdays or "NONE", contact - optional contact name)
 - INCREASE_VOLUME
 - DECREASE_VOLUME
+- VOLUME_MUTE
+- VOLUME_UNMUTE
 - BATTERY_STATUS
+- NETWORK_STATUS (use when user asks about wifi status, internet connection, or network)
 - DEVICE_INFO
 - READ_NOTIFICATIONS
 - SEARCH_APP (requires: app - name of the app to search in, query - the search query)
@@ -28,6 +31,9 @@ SUPPORTED INTENTS (You MUST use one of these exact strings):
 - SUMMARIZE_SCREEN (use when user wants to read or summarize what is currently visible on their screen)
 - EXECUTE_ROUTINE (requires: routine - trigger phrase or name of routine to execute like "good night", "study mode", "work mode")
 - EMERGENCY_SOS (requires: action - "TRIGGER" or "CANCEL")
+- TOGGLE_QUICK_SETTING (requires: app - name of the setting like "wifi", "bluetooth", "dark mode", "airplane mode")
+- TAKE_SELFIE (use for taking a selfie or front camera photo)
+- TRANSLATE_TEXT (requires: message - text to translate)
 - GENERAL_CHAT (requires: reply - conversational response, news summary, facts, or helpful information)
 - UNKNOWN_COMMAND (use when you don't understand the command or it falls outside the scope)
 
