@@ -46,6 +46,9 @@ class IntentRouter(private val context: Context) {
                 "FLASHLIGHT_ON" -> flashlightHandler.turnOn()
                 "FLASHLIGHT_OFF" -> flashlightHandler.turnOff()
                 
+                "VOLUME_MUTE" -> volumeHandler.muteVolume()
+                "VOLUME_UNMUTE" -> volumeHandler.unmuteVolume()
+                
                 "OPEN_CAMERA", "OPEN_GALLERY", "OPEN_YOUTUBE",
                 "OPEN_MAPS", "OPEN_GMAIL", "OPEN_CALCULATOR", "OPEN_SETTINGS",
                 "OPEN_CONTACTS", "OPEN_DIALER", "OPEN_PLAY_STORE", "OPEN_CLOCK",

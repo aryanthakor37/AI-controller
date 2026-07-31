@@ -20,6 +20,10 @@ class VolumeHandler(private val context: Context) {
         adjustVolume(AudioManager.ADJUST_MUTE)
     }
 
+    suspend fun unmuteVolume(): CommandResult = withContext(Dispatchers.Main) {
+        adjustVolume(AudioManager.ADJUST_UNMUTE)
+    }
+
     private fun adjustVolume(direction: Int): CommandResult {
         return try {
             val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -27,6 +31,11 @@ class VolumeHandler(private val context: Context) {
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, AudioManager.FLAG_SHOW_UI)
                 try { audioManager.setStreamVolume(AudioManager.STREAM_RING, 0, AudioManager.FLAG_SHOW_UI) } catch (_: Exception) {}
                 CommandResult(status = "Success", message = "Muted phone volume")
+            } else if (direction == AudioManager.ADJUST_UNMUTE) {
+                // To unmute and restore some volume, we can set it to a reasonable level like index 5
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 5, AudioManager.FLAG_SHOW_UI)
+                try { audioManager.setStreamVolume(AudioManager.STREAM_RING, 5, AudioManager.FLAG_SHOW_UI) } catch (_: Exception) {}
+                CommandResult(status = "Success", message = "Unmuted phone volume")
             } else {
                 // Increase/Decrease by 3 steps to make it noticeable
                 for (i in 0 until 3) {

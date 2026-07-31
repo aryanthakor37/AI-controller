@@ -13,7 +13,7 @@ const Sidebar = () => (
         </h1>
       </Link>
     </div>
-    <nav className="flex-1 px-4 space-y-2">
+    <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
       {[
         { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
         { name: 'AI Chat', path: '/dashboard/chat', icon: MessageSquare },
