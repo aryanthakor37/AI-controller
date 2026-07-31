@@ -49,6 +49,22 @@ class IntentRouter(private val context: Context) {
                 "VOLUME_MUTE" -> volumeHandler.muteVolume()
                 "VOLUME_UNMUTE" -> volumeHandler.unmuteVolume()
                 
+                "OPEN_APP" -> {
+                    if (request.app != null) {
+                        openAppHandler.openAppByName(request.app)
+                    } else {
+                        CommandResult("Failed", "No app name specified")
+                    }
+                }
+                
+                "CALL_CONTACT" -> {
+                    if (request.contact != null) {
+                        callHandler.callNumber(request.contact)
+                    } else {
+                        CommandResult("Failed", "No contact name specified")
+                    }
+                }
+                
                 "OPEN_CAMERA", "OPEN_GALLERY", "OPEN_YOUTUBE",
                 "OPEN_MAPS", "OPEN_GMAIL", "OPEN_CALCULATOR", "OPEN_SETTINGS",
                 "OPEN_CONTACTS", "OPEN_DIALER", "OPEN_PLAY_STORE", "OPEN_CLOCK",

@@ -20,6 +20,7 @@ const QUICK_SUGGESTIONS = [
 
 const Chat = () => {
   const { messages } = useSelector((state) => state.chat);
+  const { activeDevices } = useSelector((state) => state.device);
   const settings = useSelector((state) => state.settings);
   const dispatch = useDispatch();
   const [input, setInput] = useState('');
@@ -72,8 +73,12 @@ const Chat = () => {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }));
 
-      // Forward intent command via WebSocket to devices
-      socketService.sendCommand('all', intentData);
+      // Forward intent command via WebSocket to active device
+      if (activeDevices && activeDevices.length > 0) {
+        socketService.sendCommand(activeDevices[0].socketId, intentData);
+      } else {
+        socketService.sendCommand('all', intentData); // fallback
+      }
       dispatch(fetchHistory());
     } catch (error) {
       dispatch(addMessage({ 

@@ -84,4 +84,25 @@ class OpenAppHandler(private val context: Context) {
         // Final fallback: just open the default camera by action without checking resolution
         return Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
     }
+
+    suspend fun openAppByName(appName: String): CommandResult = withContext(Dispatchers.Main) {
+        try {
+            val pm = context.packageManager
+            val packages = pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
+            for (packageInfo in packages) {
+                val label = pm.getApplicationLabel(packageInfo).toString()
+                if (label.equals(appName, ignoreCase = true) || label.contains(appName, ignoreCase = true)) {
+                    val intent = pm.getLaunchIntentForPackage(packageInfo.packageName)
+                    if (intent != null) {
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(intent)
+                        return@withContext CommandResult("Success", "Opened $label")
+                    }
+                }
+            }
+            CommandResult("Failed", "Could not find installed app matching: $appName")
+        } catch (e: Exception) {
+            CommandResult("Failed", "Error searching for app: ${e.message}")
+        }
+    }
 }
