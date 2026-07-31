@@ -66,7 +66,7 @@ const DashboardLayout = () => {
             </Link>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto p-8 z-10">
+        <div className="flex-1 overflow-y-auto p-8 z-10 flex flex-col">
           <Outlet />
         </div>
       </main>

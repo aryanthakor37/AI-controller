@@ -104,7 +104,7 @@ const Chat = () => {
   };
 
   return (
-    <div className="h-full flex flex-col space-y-4">
+    <div className="flex-1 min-h-0 flex flex-col space-y-4">
       {/* Header Bar */}
       <div className="flex justify-between items-center">
         <div>
