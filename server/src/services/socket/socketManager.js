@@ -87,6 +87,13 @@ const initSocket = (httpServer) => {
       socket.emit('dashboard:devices_update', connectionManager.getAllDevices());
     });
 
+    // Handle command results coming back from the Android device
+    socket.on('command:result', (result) => {
+      logToFile(`[SocketManager] command:result from ${socket.id}: ${JSON.stringify(result)}`);
+      // Broadcast this result to the dashboard so the user sees what the phone actually did
+      ioInstance.emit('dashboard:command_result', { deviceId: socket.id, result });
+    });
+
     socket.on('disconnect', (reason) => {
       logToFile(`[SocketManager] Disconnect: ${socket.id}, reason: ${reason}`);
       const device = connectionManager.removeDevice(socket.id);

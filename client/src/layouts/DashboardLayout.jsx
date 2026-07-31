@@ -43,6 +43,12 @@ const Sidebar = () => (
 
 const DashboardLayout = () => {
   const { user, isAuthenticated } = useSelector(state => state.user);
+  
+  React.useEffect(() => {
+    import('../services/socketService').then(module => {
+      module.default.connect();
+    });
+  }, []);
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

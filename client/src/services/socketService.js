@@ -46,6 +46,21 @@ class SocketService {
       if (debug) console.log('[SocketService Debug] Telemetry Event:', telemetryData);
       store.dispatch(updateDeviceTelemetry(telemetryData));
     });
+
+    this.socket.on('dashboard:command_result', (data) => {
+      if (debug) console.log('[SocketService Debug] Command Result:', data);
+      const { result } = data;
+      const statusIcon = result.status === 'Success' ? '✅' : '❌';
+      
+      // Lazily import chatSlice to avoid circular dependencies if any
+      import('../redux/slices/chatSlice').then(({ addMessage }) => {
+        store.dispatch(addMessage({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+          role: 'ai',
+          content: `📱 **Phone Response**\n${statusIcon} ${result.status} - ${result.message}`
+        }));
+      });
+    });
   }
 
   sendCommand(deviceId, commandPayload) {
