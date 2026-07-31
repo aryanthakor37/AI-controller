@@ -23,6 +23,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Inject
 
+import com.aimobile.repository.RoutineRepository
+import com.aimobile.command.RoutineExecutor
+
 data class MockUser(
     val name: String = "User",
     val email: String = "",
@@ -56,7 +59,9 @@ data class MockChatMessage(
 @HiltViewModel
 class MockViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val routineRepository: RoutineRepository,
+    private val routineExecutor: RoutineExecutor
 ) : ViewModel() {
 
     private val tokenManager = TokenManager(context)
@@ -294,6 +299,13 @@ class MockViewModel @Inject constructor(
     private suspend fun executeOfflineFallback(command: String): String {
         val clean = command.lowercase(java.util.Locale.getDefault()).trim()
         
+        // Check for Dynamic User Routines first
+        val matchedRoutine = routineRepository.findRoutineByName(clean)
+        if (matchedRoutine != null) {
+            routineExecutor.executeRoutine(matchedRoutine)
+            return "⭐ Executing '${matchedRoutine.name}' Routine..."
+        }
+
         var intent: String = "UNKNOWN_COMMAND"
         var appName: String? = null
         var queryText: String? = null
@@ -437,35 +449,6 @@ class MockViewModel @Inject constructor(
                 intent = "CHECK_WEATHER"
                 queryText = command
             }
-            clean == "good morning" || clean.contains("good morning") -> {
-                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Wifi")) } catch (_: Exception) {}
-                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Brightness")) } catch (_: Exception) {}
-                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Spotify")) } catch (_: Exception) {}
-                _lastActionFeedback.value = "⭐ Good Morning Routine Executed"
-                return "⭐ Executed 'Good Morning' AI Routine:\n1. WiFi Connection: Enabled\n2. Brightness Settings: Opened (80%)\n3. Spotify: Launched"
-            }
-            clean == "office mode" || clean.contains("office mode") || clean.contains("work mode") -> {
-                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "MUTE_VOLUME")) } catch (_: Exception) {}
-                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_MAPS")) } catch (_: Exception) {}
-                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Bluetooth")) } catch (_: Exception) {}
-                _lastActionFeedback.value = "⭐ Office Mode Routine Executed"
-                return "⭐ Executed 'Office Mode' AI Routine:\n1. Phone Volume: Silent/Muted\n2. Google Maps: Opened\n3. Bluetooth Settings: Enabled"
-            }
-            clean.contains("schedule") || clean.contains("vage") || clean.contains("baje") || Regex("\\b\\d{1,2}\\s*(am|pm)\\b").containsMatchIn(clean) -> {
-                intent = "SCHEDULE_AUTOMATION"
-                queryText = command
-            }
-            clean == "sleep mode" || clean.contains("sleep mode") || clean.contains("bedtime") -> {
-                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "MUTE_VOLUME")) } catch (_: Exception) {}
-                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "SET_ALARM", time = "07:00")) } catch (_: Exception) {}
-                try { intentRouter.route(com.aimobile.models.CommandRequest(intent = "OPEN_APP", app = "Brightness")) } catch (_: Exception) {}
-                _lastActionFeedback.value = "⭐ Sleep Mode Routine Executed"
-                return "⭐ Executed 'Sleep Mode' AI Routine:\n1. DND / Silent: Muted\n2. Morning Alarm: 7 AM Set\n3. Brightness: Dimmed (10%)"
-            }
-            clean.contains("routine") -> {
-                _lastActionFeedback.value = "⚡ Executing Daily Routine..."
-                return "⚡ Executed Daily Routine:\n1. Weather Forecast: Checked\n2. Morning Alarm: 7 AM Active\n3. WiFi Connection: Enabled"
-            }
             clean.contains("morning news") || (clean.contains("news") && clean.contains("morning")) -> {
                 _lastActionFeedback.value = "📰 Morning News Briefing"
                 return "📰 Morning News Digest:\n1. Tech: Breakthroughs in AI mobile automation\n2. Global: Markets holding steady across indices\n3. Sports: Championship highlights updated\n4. Local: Pleasant weather conditions expected."
@@ -477,7 +460,7 @@ class MockViewModel @Inject constructor(
             clean.contains("night mode") -> {
                 intent = "SET_ALARM"
                 queryText = "07:00"
-                _lastActionFeedback.value = "🌙 Morning alarm 7 AM set"
+                _lastActionFeedback.value = "🌙 Morning alarm 6 AM set"
             }
             clean.contains("reminder") || clean.contains("remind") || clean.contains("birthday") -> {
                 intent = "SET_REMINDER"

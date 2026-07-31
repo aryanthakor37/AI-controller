@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { getApiUrl } from '../config';
 import { motion } from 'framer-motion';
-import { Battery, HardDrive, Smartphone, Zap, Play, Wifi, Cake, Bell, Calendar } from 'lucide-react';
+import { Battery, HardDrive, Smartphone, Zap, Play, Wifi, Cake, Bell, Calendar, VolumeX, Volume2, Flashlight, MonitorPlay } from 'lucide-react';
 import { Card } from '../components/atoms/Card';
 import socketService from '../services/socketService';
 
@@ -77,6 +77,16 @@ const Dashboard = () => {
     show: { opacity: 1, y: 0 }
   };
 
+  const sendRemoteCommand = (intent) => {
+    if (activeDevices.length > 0) {
+      const targetSocketId = activeDevices[0].socketId; 
+      socketService.sendCommand(targetSocketId, { intent });
+      alert(`${intent} command sent to device!`);
+    } else {
+      alert("No device connected!");
+    }
+  };
+
   return (
     <motion.div 
       variants={container}
@@ -108,19 +118,36 @@ const Dashboard = () => {
           >
             Pair New Device
           </button>
-          <button 
-            onClick={() => {
-              if (activeDevices.length > 0) {
-                const targetSocketId = activeDevices[0].socketId; 
-                socketService.sendCommand(targetSocketId, { intent: "OPEN_CAMERA" });
-                alert("OPEN_CAMERA command sent to your phone!");
-              } else {
-                alert("No device connected!");
-              }
-            }}
-            className="flex items-center px-4 py-2 bg-primary text-white rounded-xl hover:bg-blue-600 transition-colors shadow-lg shadow-primary/25">
-            <Zap className="w-4 h-4 mr-2" />
-            Open Camera
+        </div>
+      </motion.div>
+
+      {/* Remote Control Quick Actions */}
+      <motion.div variants={item} className="mb-8">
+        <h2 className="text-xl font-bold mb-4">Remote Control (Testing)</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <button onClick={() => sendRemoteCommand("VOLUME_MUTE")} className="flex flex-col items-center justify-center p-4 bg-red-500/10 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors text-red-400">
+            <VolumeX className="w-6 h-6 mb-2" />
+            <span className="font-semibold text-sm">Silent Mode</span>
+          </button>
+          <button onClick={() => sendRemoteCommand("VOLUME_UNMUTE")} className="flex flex-col items-center justify-center p-4 bg-green-500/10 border border-green-500/20 rounded-xl hover:bg-green-500/20 transition-colors text-green-400">
+            <Volume2 className="w-6 h-6 mb-2" />
+            <span className="font-semibold text-sm">General Mode</span>
+          </button>
+          <button onClick={() => sendRemoteCommand("FLASHLIGHT_ON")} className="flex flex-col items-center justify-center p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl hover:bg-yellow-500/20 transition-colors text-yellow-400">
+            <Flashlight className="w-6 h-6 mb-2" />
+            <span className="font-semibold text-sm">Torch ON</span>
+          </button>
+          <button onClick={() => sendRemoteCommand("FLASHLIGHT_OFF")} className="flex flex-col items-center justify-center p-4 bg-slate-500/10 border border-slate-500/20 rounded-xl hover:bg-slate-500/20 transition-colors text-slate-400">
+            <Flashlight className="w-6 h-6 mb-2 opacity-50" />
+            <span className="font-semibold text-sm">Torch OFF</span>
+          </button>
+          <button onClick={() => sendRemoteCommand("OPEN_YOUTUBE")} className="flex flex-col items-center justify-center p-4 bg-red-600/10 border border-red-600/20 rounded-xl hover:bg-red-600/20 transition-colors text-red-500">
+            <MonitorPlay className="w-6 h-6 mb-2" />
+            <span className="font-semibold text-sm">Open YouTube</span>
+          </button>
+          <button onClick={() => sendRemoteCommand("OPEN_CAMERA")} className="flex flex-col items-center justify-center p-4 bg-primary/10 border border-primary/20 rounded-xl hover:bg-primary/20 transition-colors text-primary">
+            <Zap className="w-6 h-6 mb-2" />
+            <span className="font-semibold text-sm">Open Camera</span>
           </button>
         </div>
       </motion.div>

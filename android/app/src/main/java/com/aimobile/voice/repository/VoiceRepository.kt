@@ -13,10 +13,16 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.aimobile.repository.RoutineRepository
+import com.aimobile.command.RoutineExecutor
+import dagger.Lazy
+
 @Singleton
 class VoiceRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val apiService: ApiService
+    private val apiService: ApiService,
+    private val routineRepository: RoutineRepository,
+    private val routineExecutorLazy: Lazy<RoutineExecutor>
 ) {
     private val intentRouter = IntentRouter(context)
 
@@ -88,6 +94,17 @@ class VoiceRepository @Inject constructor(
     private fun parseLocalFallback(command: String): VoiceCommandResult {
         val clean = command.lowercase(java.util.Locale.getDefault()).trim()
         
+        // Check for Dynamic User Routines first
+        val matchedRoutine = routineRepository.findRoutineByName(clean)
+        if (matchedRoutine != null) {
+            routineExecutorLazy.get().executeRoutine(matchedRoutine)
+            return VoiceCommandResult.Success(
+                intent = "ROUTINE", 
+                reply = "Executing routine '${matchedRoutine.name}'...",
+                request = com.aimobile.models.CommandRequest(intent = "ROUTINE", message = matchedRoutine.id)
+            )
+        }
+
         val intent: String
         var appName: String? = null
         var contactName: String? = null
@@ -163,8 +180,19 @@ class VoiceRepository @Inject constructor(
             matchesKeyword(clean, "youtube", "utube", "youtub") -> {
                 intent = "OPEN_YOUTUBE"
             }
-            matchesKeyword(clean, "map", "maps", "naksho") -> {
+            matchesKeyword(clean, "map", "maps", "naksho") && !clean.contains("direction") && !clean.contains("navigate") -> {
                 intent = "OPEN_MAPS"
+            }
+            clean.contains("direction") || clean.contains("navigate") || clean.contains("take me to") -> {
+                intent = "GET_DIRECTIONS"
+                val dest = clean.replace("give me directions to", "").replace("give me direction to", "")
+                                .replace("give me directions for", "").replace("give me direction for", "")
+                                .replace("directions to", "").replace("direction to", "")
+                                .replace("navigate to", "").replace("take me to", "")
+                                .replace("give directions", "").replace("get directions", "")
+                                .replace("directions", "").replace("direction", "")
+                                .replace("navigate", "").trim()
+                smsMsg = dest
             }
             matchesKeyword(clean, "bluetooth", "bluetoth", "blutoth") -> {
                 intent = "OPEN_APP"
@@ -274,6 +302,7 @@ class VoiceRepository @Inject constructor(
             "OPEN_CHROME" -> "Opening Chrome locally"
             "OPEN_YOUTUBE" -> "Opening YouTube locally"
             "OPEN_MAPS" -> "Opening Maps locally"
+            "GET_DIRECTIONS" -> "Getting directions to $smsMsg locally"
             "OPEN_APP" -> "Opening $appName locally"
             "SET_ALARM" -> "Opening Alarms locally"
             else -> "Executing command locally"

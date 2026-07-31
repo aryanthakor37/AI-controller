@@ -70,8 +70,8 @@ const initSocket = (httpServer) => {
     // Handle commands from Dashboard
     socket.on('dashboard:send_command', ({ deviceId, command }) => {
       logToFile(`[SocketManager] Sending command to ${deviceId}: ${JSON.stringify(command)}`);
-      // Forward command to ALL devices (to test if socketId routing is the issue)
-      ioInstance.emit('command:execute', command);
+      // Forward command to the specific device's socket
+      ioInstance.to(deviceId).emit('command:execute', command);
     });
 
     // Handle dashboard requesting device list on connect

@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.aimobile.ui.components.GlassCard
 import com.aimobile.ui.theme.*
 import com.aimobile.ui.viewmodel.AutomationViewModel
-import com.aimobile.ui.viewmodel.RoutineItem
+import com.aimobile.models.RoutineItem
 import com.aimobile.utils.HapticHelper
 import com.aimobile.utils.HapticType
 
