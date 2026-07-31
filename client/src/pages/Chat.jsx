@@ -81,10 +81,11 @@ const Chat = () => {
       }
       dispatch(fetchHistory());
     } catch (error) {
+      const errorMsg = error.response?.data?.error || error.message || 'Unknown error';
       dispatch(addMessage({ 
         id: Date.now().toString(), 
         role: 'ai', 
-        content: 'Error: Unable to connect to AI engine. Please verify server status.' 
+        content: `Error: Unable to connect to AI engine. Details: ${errorMsg}` 
       }));
     } finally {
       setIsSubmitting(false);
