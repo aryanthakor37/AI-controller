@@ -402,10 +402,14 @@ class IntentRouter(private val context: Context) {
                                                 val hwBuffer = screenshot.hardwareBuffer
                                                 val bitmap = android.graphics.Bitmap.wrapHardwareBuffer(hwBuffer, screenshot.colorSpace)
                                                 if (bitmap != null) {
+                                                    // Hardware bitmaps cannot be compressed directly. Must copy to software bitmap.
+                                                    val softwareBitmap = bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                                                    
                                                     val baos = java.io.ByteArrayOutputStream()
-                                                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 60, baos)
+                                                    softwareBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 60, baos)
                                                     val base64 = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
                                                     continuation.resumeWith(Result.success(CommandResult("Success", "Screenshot captured", "SCREENSHOT:$base64")))
+                                                    softwareBitmap.recycle()
                                                 } else {
                                                     continuation.resumeWith(Result.success(CommandResult("Failed", "Failed to wrap buffer")))
                                                 }
