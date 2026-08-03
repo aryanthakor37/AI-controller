@@ -277,6 +277,16 @@ class IntentRouter(private val context: Context) {
                     com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, tileName)
                 }
 
+                "TOGGLE_WIFI", "WIFI_ON", "WIFI_OFF" -> {
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, "wifi")
+                }
+
+                "TOGGLE_BLUETOOTH", "BLUETOOTH_ON", "BLUETOOTH_OFF" -> {
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, "bluetooth")
+                }
+
                 "SET_ALARM" -> {
                     val rawTime = request.time ?: request.message ?: request.query ?: ""
                     val (h, m) = parseAlarmTime(rawTime)

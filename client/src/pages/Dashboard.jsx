@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { getApiUrl } from '../config';
 import { motion } from 'framer-motion';
-import { Battery, HardDrive, Smartphone, Zap, Play, Wifi, Cake, Bell, Calendar, VolumeX, Volume2, Flashlight, MonitorPlay } from 'lucide-react';
+import { Battery, HardDrive, Smartphone, Zap, Play, Wifi, Cake, Bell, Calendar, VolumeX, Volume2, Flashlight, MonitorPlay, Bluetooth } from 'lucide-react';
 import { Card } from '../components/atoms/Card';
 import socketService from '../services/socketService';
 
@@ -18,7 +18,7 @@ const Dashboard = () => {
   const [remindersList, setRemindersList] = React.useState([]);
 
   useEffect(() => {
-    socketService.connect();
+    // socketService.connect(); // Managed by DashboardLayout
     
     // Fallback: Fetch active devices directly via HTTP to prevent Socket.IO race conditions on reload
     fetch(`${getApiUrl()}/device/list-active`)
@@ -61,7 +61,7 @@ const Dashboard = () => {
       })
       .catch(console.error);
 
-    return () => socketService.disconnect();
+    // return () => socketService.disconnect(); // Managed by DashboardLayout
   }, [dispatch]);
 
   const container = {
@@ -148,6 +148,14 @@ const Dashboard = () => {
           <button onClick={() => sendRemoteCommand("OPEN_CAMERA")} className="flex flex-col items-center justify-center p-4 bg-primary/10 border border-primary/20 rounded-xl hover:bg-primary/20 transition-colors text-primary">
             <Zap className="w-6 h-6 mb-2" />
             <span className="font-semibold text-sm">Open Camera</span>
+          </button>
+          <button onClick={() => sendRemoteCommand("TOGGLE_WIFI")} className="flex flex-col items-center justify-center p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl hover:bg-blue-500/20 transition-colors text-blue-400">
+            <Wifi className="w-6 h-6 mb-2" />
+            <span className="font-semibold text-sm">Toggle Wi-Fi</span>
+          </button>
+          <button onClick={() => sendRemoteCommand("TOGGLE_BLUETOOTH")} className="flex flex-col items-center justify-center p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl hover:bg-indigo-500/20 transition-colors text-indigo-400">
+            <Bluetooth className="w-6 h-6 mb-2" />
+            <span className="font-semibold text-sm">Toggle Bluetooth</span>
           </button>
         </div>
       </motion.div>

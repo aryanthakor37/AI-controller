@@ -45,9 +45,14 @@ const DashboardLayout = () => {
   const { user, isAuthenticated } = useSelector(state => state.user);
   
   React.useEffect(() => {
+    let socketModule = null;
     import('../services/socketService').then(module => {
-      module.default.connect();
+      socketModule = module.default;
+      socketModule.connect();
     });
+    return () => {
+      if (socketModule) socketModule.disconnect();
+    };
   }, []);
 
   if (!isAuthenticated) {

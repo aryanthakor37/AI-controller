@@ -33,9 +33,9 @@ const Device = () => {
   };
 
   useEffect(() => {
-    socketService.connect();
+    // socketService.connect(); // Managed by DashboardLayout
     fetchDevices();
-    return () => socketService.disconnect();
+    // return () => socketService.disconnect(); // Managed by DashboardLayout
   }, []);
 
   const handleGeneratePairingCode = async () => {

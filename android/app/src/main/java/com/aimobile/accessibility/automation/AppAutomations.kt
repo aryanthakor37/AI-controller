@@ -298,12 +298,28 @@ object AppAutomations {
         
         delay(1000) // Wait for panel to drop down
 
+        val namesToTry = when (tileName.lowercase().trim()) {
+            "wifi", "wi-fi", "internet" -> listOf("Internet", "Wi-Fi", "WLAN", "Wi‑Fi", tileName)
+            "bluetooth" -> listOf("Bluetooth", tileName)
+            "location", "gps" -> listOf("Location", tileName)
+            "mobile data", "data" -> listOf("Mobile data", tileName)
+            "airplane mode", "flight mode", "aeroplane mode" -> listOf("Airplane mode", "Flight mode", tileName)
+            else -> listOf(tileName)
+        }
+
         var clicked = false
+        var successfulName = tileName
         // Try finding it on current page, if not, swipe and try again
         for (page in 0..2) {
-            clicked = AutomationManager.clickNodeByText(service, tileName, 1)
-            if (!clicked) {
-                clicked = AutomationManager.clickNodeByContentDescription(service, tileName, 1)
+            for (name in namesToTry) {
+                clicked = AutomationManager.clickNodeByText(service, name, 1)
+                if (!clicked) {
+                    clicked = AutomationManager.clickNodeByContentDescription(service, name, 1)
+                }
+                if (clicked) {
+                    successfulName = name
+                    break
+                }
             }
             if (clicked) break
             
@@ -317,7 +333,7 @@ object AppAutomations {
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
 
         return if (clicked) {
-            CommandResult("Success", "Toggled $tileName in Quick Settings")
+            CommandResult("Success", "Toggled $successfulName in Quick Settings")
         } else {
             CommandResult("Failed", "Could not find $tileName in Quick Settings")
         }
