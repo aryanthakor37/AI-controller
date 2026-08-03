@@ -39,6 +39,7 @@ class ScreenCaptureManager @Inject constructor(
     var pendingData: Intent? = null
 
     var onFrameAvailable: ((String) -> Unit)? = null
+    var onError: ((String) -> Unit)? = null
 
     fun startProjection(resultCode: Int, data: Intent, serviceContext: Context) {
         val projectionManager = serviceContext.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -104,15 +105,20 @@ class ScreenCaptureManager @Inject constructor(
                 }
             } catch (e: Throwable) {
                 Log.e("ScreenCapture", "Frame error", e)
+                onError?.invoke("Frame error: ${e.message}")
             }
         }, handler)
 
-        virtualDisplay = mediaProjection?.createVirtualDisplay(
-            "ScreenStream",
-            width, height, density,
-            DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            imageReader?.surface, null, handler
-        )
+        try {
+            virtualDisplay = mediaProjection?.createVirtualDisplay(
+                "ScreenStream",
+                width, height, density,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader?.surface, null, handler
+            )
+        } catch (e: Throwable) {
+            onError?.invoke("VirtualDisplay error: ${e.message}")
+        }
     }
 
     fun stopStream() {

@@ -39,6 +39,11 @@ class ConnectionManager @Inject constructor(
             payload.put("frame", base64Frame)
             socket?.emit("device:screen_frame", payload)
         }
+        screenCaptureManager.onError = { errorMsg ->
+            val payload = org.json.JSONObject()
+            payload.put("error", errorMsg)
+            socket?.emit("device:screen_frame_error", payload)
+        }
     }
     
     private val _connectionState = MutableStateFlow(false)

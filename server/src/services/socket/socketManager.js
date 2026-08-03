@@ -84,6 +84,13 @@ const initSocket = (httpServer) => {
       });
     });
 
+    socket.on('device:screen_frame_error', (data) => {
+      ioInstance.emit('dashboard:screen_frame_error', {
+        socketId: socket.id,
+        error: data.error
+      });
+    });
+
     // Handle commands from Dashboard
     socket.on('dashboard:send_command', ({ deviceId, command }) => {
       logToFile(`[SocketManager] Sending command to ${deviceId}: ${JSON.stringify(command)}`);

@@ -24,6 +24,7 @@ const Device = () => {
   const [screenshotData, setScreenshotData] = useState(null);
   const [liveScreenActiveDevice, setLiveScreenActiveDevice] = useState(null);
   const [liveScreenFrame, setLiveScreenFrame] = useState(null);
+  const [liveScreenError, setLiveScreenError] = useState(null);
 
   const fetchDevices = async () => {
     try {
@@ -46,14 +47,21 @@ const Device = () => {
 
     const handleScreenFrame = (data) => {
       setLiveScreenFrame(data.frame);
+      setLiveScreenError(null);
+    };
+
+    const handleScreenFrameError = (data) => {
+      setLiveScreenError(data.error);
     };
 
     socketService.socket?.on('dashboard:screenshot_result', handleScreenshotResult);
     socketService.socket?.on('dashboard:screen_frame', handleScreenFrame);
+    socketService.socket?.on('dashboard:screen_frame_error', handleScreenFrameError);
 
     return () => {
       socketService.socket?.off('dashboard:screenshot_result', handleScreenshotResult);
       socketService.socket?.off('dashboard:screen_frame', handleScreenFrame);
+      socketService.socket?.off('dashboard:screen_frame_error', handleScreenFrameError);
     };
   }, []);
 
@@ -399,9 +407,11 @@ const Device = () => {
                   <img src={`data:image/jpeg;base64,${liveScreenFrame}`} alt="Live Screen" className="w-full h-full object-contain" />
                 ) : (
                   <div className="text-center p-8">
-                    <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-slate-400 text-sm">Waiting for device to accept prompt...</p>
-                    <p className="text-slate-500 text-xs mt-2">Please click 'Start Now' on your phone</p>
+                    {!liveScreenError && <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>}
+                    <p className={`text-sm ${liveScreenError ? 'text-red-400 font-bold' : 'text-slate-400'}`}>
+                      {liveScreenError ? `ERROR: ${liveScreenError}` : 'Waiting for device to accept prompt...'}
+                    </p>
+                    {!liveScreenError && <p className="text-slate-500 text-xs mt-2">Please click 'Start Now' on your phone</p>}
                   </div>
                 )}
               </div>
