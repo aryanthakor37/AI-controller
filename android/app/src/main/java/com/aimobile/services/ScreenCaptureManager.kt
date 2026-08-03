@@ -57,18 +57,22 @@ class ScreenCaptureManager @Inject constructor(
         if (isStreaming) return
         isStreaming = true
 
-        val metrics = serviceContext.resources.displayMetrics
-        val width = 360 // Downscale significantly for fast stream
-        var height = (width * metrics.heightPixels) / metrics.widthPixels
-        if (height % 2 != 0) height++
+        try {
+            val metrics = serviceContext.resources.displayMetrics
+            val width = 360 // Downscale significantly for fast stream
+            val screenWidth = if (metrics.widthPixels > 0) metrics.widthPixels else 1080
+            val screenHeight = if (metrics.heightPixels > 0) metrics.heightPixels else 1920
+            
+            var height = (width * screenHeight) / screenWidth
+            if (height % 2 != 0) height++
 
-        val density = metrics.densityDpi
+            val density = if (metrics.densityDpi > 0) metrics.densityDpi else 400
 
-        handlerThread = android.os.HandlerThread("ScreenCaptureThread")
-        handlerThread?.start()
-        handler = android.os.Handler(handlerThread!!.looper)
+            handlerThread = android.os.HandlerThread("ScreenCaptureThread")
+            handlerThread?.start()
+            handler = android.os.Handler(handlerThread!!.looper)
 
-        imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+            imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
         
         imageReader?.setOnImageAvailableListener({ reader ->
             if (!isStreaming) return@setOnImageAvailableListener
@@ -118,6 +122,10 @@ class ScreenCaptureManager @Inject constructor(
             )
         } catch (e: Throwable) {
             onError?.invoke("VirtualDisplay error: ${e.message}")
+        }
+        } catch (e: Throwable) {
+            Log.e("ScreenCapture", "startStream error", e)
+            onError?.invoke("startStream error: ${e.message}")
         }
     }
 
