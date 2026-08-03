@@ -13,31 +13,38 @@ object UnlockHelper {
 
     fun turnScreenOnAndUnlock(context: Context) {
         try {
-            // 1. Wake up Screen CPU & Display
             val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-            @Suppress("DEPRECATION")
-            val wakeLock = powerManager.newWakeLock(
-                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
-                        PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                        PowerManager.ON_AFTER_RELEASE,
-                "AiMobileControl:WakeAndUnlock"
-            )
-            wakeLock.acquire(5000) // Hold for 5 seconds to ensure display lights up
-
-            // 2. Dismiss Insecure Keyguard if available
             val keyguardManager = context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-                @Suppress("DEPRECATION")
-                val kmLock = keyguardManager.newKeyguardLock("AiMobileControl:Unlock")
-                @Suppress("DEPRECATION")
-                kmLock.disableKeyguard()
-            }
+            
+            val isScreenOn = powerManager.isInteractive
+            val isLocked = keyguardManager.isKeyguardLocked
 
-            // 3. Launch MainActivity over Lock Screen
-            val intent = Intent(context, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            // Only wake and launch MainActivity if the screen is off or locked
+            if (!isScreenOn || isLocked) {
+                // 1. Wake up Screen CPU & Display
+                @Suppress("DEPRECATION")
+                val wakeLock = powerManager.newWakeLock(
+                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                            PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                            PowerManager.ON_AFTER_RELEASE,
+                    "AiMobileControl:WakeAndUnlock"
+                )
+                wakeLock.acquire(5000) // Hold for 5 seconds to ensure display lights up
+
+                // 2. Dismiss Insecure Keyguard if available
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                    @Suppress("DEPRECATION")
+                    val kmLock = keyguardManager.newKeyguardLock("AiMobileControl:Unlock")
+                    @Suppress("DEPRECATION")
+                    kmLock.disableKeyguard()
+                }
+
+                // 3. Launch MainActivity over Lock Screen to request unlock
+                val intent = Intent(context, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                }
+                context.startActivity(intent)
             }
-            context.startActivity(intent)
         } catch (e: Exception) {
             e.printStackTrace()
         }
