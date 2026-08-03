@@ -48,7 +48,7 @@ class ScreenCaptureService : Service() {
             0
         }
 
-        if (resultCode != -1 && data != null) {
+        if (resultCode == -1 && data != null) {
             try {
                 screenCaptureManager.initProjection(resultCode, data, this)
                 startForeground(NOTIFICATION_ID, createNotification(), type)
