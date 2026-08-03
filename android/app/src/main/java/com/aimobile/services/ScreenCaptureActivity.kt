@@ -31,7 +31,12 @@ class ScreenCaptureActivity : ComponentActivity() {
             } else {
                 startService(serviceIntent)
             }
+            // Delay finish to ensure startForeground executes while activity is still visible
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                finish()
+            }, 1000)
+        } else {
+            finish()
         }
-        finish() // Close the invisible activity immediately
     }
 }

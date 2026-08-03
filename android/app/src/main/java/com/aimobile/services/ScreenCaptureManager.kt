@@ -42,7 +42,7 @@ class ScreenCaptureManager @Inject constructor(
     var onFrameAvailable: ((String) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
 
-    fun startProjection(resultCode: Int, data: Intent, serviceContext: Context) {
+    fun initProjection(resultCode: Int, data: Intent, serviceContext: Context) {
         val projectionManager = serviceContext.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = projectionManager.getMediaProjection(resultCode, data)
         mediaProjection?.registerCallback(object : MediaProjection.Callback() {
@@ -50,11 +50,10 @@ class ScreenCaptureManager @Inject constructor(
                 stopStream()
             }
         }, null)
-        startStream(serviceContext)
     }
 
     @SuppressLint("WrongConstant")
-    private fun startStream(serviceContext: Context) {
+    fun startStream(serviceContext: Context) {
         if (isStreaming) return
         isStreaming = true
         firstFrameReceived = false
