@@ -1,15 +1,15 @@
 package com.aimobile.services
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjectionManager
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class ScreenCaptureActivity : Activity() {
+class ScreenCaptureActivity : ComponentActivity() {
 
     @Inject
     lateinit var screenCaptureManager: ScreenCaptureManager
