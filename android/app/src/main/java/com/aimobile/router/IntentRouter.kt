@@ -378,6 +378,16 @@ class IntentRouter(private val context: Context) {
                         CommandResult("Success", msg.ifEmpty { "Chat processed" })
                     }
                 }
+
+                "BATTERY_STATUS", "GET_BATTERY_STATUS" -> {
+                    val intentFilter = android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED)
+                    val batteryStatus = context.registerReceiver(null, intentFilter)
+                    val level = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                    val scale = batteryStatus?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, -1) ?: -1
+                    val battery = if (level == -1 || scale == -1) 100 else (level * 100 / scale.toFloat()).toInt()
+                    CommandResult("Success", "Battery Level: $battery%")
+                }
+
                 "TAKE_SCREENSHOT" -> {
                     val service = com.aimobile.accessibility.MyAccessibilityService.instance
                     if (service != null) {
