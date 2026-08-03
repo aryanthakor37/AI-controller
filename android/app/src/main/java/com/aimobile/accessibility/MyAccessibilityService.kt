@@ -49,6 +49,35 @@ class MyAccessibilityService : AccessibilityService() {
         }
     }
 
+    fun performGesture(startXPercent: Float, startYPercent: Float, endXPercent: Float, endYPercent: Float, durationMs: Long) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            try {
+                val metrics = resources.displayMetrics
+                val screenWidth = metrics.widthPixels
+                val screenHeight = metrics.heightPixels
+
+                val startX = startXPercent * screenWidth
+                val startY = startYPercent * screenHeight
+                val endX = endXPercent * screenWidth
+                val endY = endYPercent * screenHeight
+
+                val path = android.graphics.Path()
+                path.moveTo(startX, startY)
+                path.lineTo(endX, endY)
+
+                val duration = if (durationMs < 50L) 50L else durationMs
+                
+                val stroke = android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, duration)
+                val gesture = android.accessibilityservice.GestureDescription.Builder().addStroke(stroke).build()
+                
+                dispatchGesture(gesture, null, null)
+                Log.d("AccessibilityService", "Dispatched gesture: start($startX, $startY) to end($endX, $endY) dur:$duration")
+            } catch (e: Exception) {
+                Log.e("AccessibilityService", "Failed to dispatch gesture", e)
+            }
+        }
+    }
+
     override fun onInterrupt() {
         Log.d("AccessibilityService", "Service Interrupted")
         _isServiceEnabled.value = false

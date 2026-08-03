@@ -118,6 +118,25 @@ class ConnectionManager @Inject constructor(
                 }
             }
 
+            socket?.on("device:perform_gesture") { args ->
+                if (args.isNotEmpty()) {
+                    try {
+                        val gestureObj = args[0] as JSONObject
+                        val startX = gestureObj.getDouble("startX").toFloat()
+                        val startY = gestureObj.getDouble("startY").toFloat()
+                        val endX = gestureObj.getDouble("endX").toFloat()
+                        val endY = gestureObj.getDouble("endY").toFloat()
+                        val duration = gestureObj.getLong("durationMs")
+                        
+                        com.aimobile.accessibility.MyAccessibilityService.instance?.performGesture(
+                            startX, startY, endX, endY, duration
+                        )
+                    } catch (e: Exception) {
+                        Log.e("ConnectionManager", "Error performing gesture", e)
+                    }
+                }
+            }
+
             socket?.connect()
         } catch (e: URISyntaxException) {
             Log.e("ConnectionManager", "Socket URL error", e)

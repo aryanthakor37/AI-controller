@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -25,6 +25,7 @@ const Device = () => {
   const [liveScreenActiveDevice, setLiveScreenActiveDevice] = useState(null);
   const [liveScreenFrame, setLiveScreenFrame] = useState(null);
   const [liveScreenError, setLiveScreenError] = useState(null);
+  const gestureStartRef = useRef(null);
 
   const fetchDevices = async () => {
     try {
@@ -63,7 +64,33 @@ const Device = () => {
       socketService.socket?.off('dashboard:screen_frame', handleScreenFrame);
       socketService.socket?.off('dashboard:screen_frame_error', handleScreenFrameError);
     };
-  }, []);
+  }, [dispatch]);
+
+  const handlePointerDown = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    gestureStartRef.current = { x, y, time: Date.now() };
+  };
+
+  const handlePointerUp = (e) => {
+    if (!gestureStartRef.current) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const endX = (e.clientX - rect.left) / rect.width;
+    const endY = (e.clientY - rect.top) / rect.height;
+    const { x: startX, y: startY, time: startTime } = gestureStartRef.current;
+    const durationMs = Date.now() - startTime;
+
+    if (liveScreenActiveDevice && socketService.socket) {
+      socketService.socket.emit('dashboard:perform_gesture', {
+        socketId: liveScreenActiveDevice,
+        gesture: { startX, startY, endX, endY, durationMs }
+      });
+    }
+    
+    gestureStartRef.current = null;
+  };
 
   const handleGeneratePairingCode = async () => {
     setIsGenerating(true);
@@ -404,7 +431,15 @@ const Device = () => {
               </div>
               <div className="bg-black flex justify-center items-center min-h-[60vh] relative">
                 {liveScreenFrame ? (
-                  <img src={`data:image/jpeg;base64,${liveScreenFrame}`} alt="Live Screen" className="w-full h-full object-contain" />
+                  <img 
+                    src={`data:image/jpeg;base64,${liveScreenFrame}`} 
+                    alt="Live Screen" 
+                    className="w-full h-full object-contain cursor-crosshair touch-none" 
+                    onPointerDown={handlePointerDown}
+                    onPointerUp={handlePointerUp}
+                    onPointerLeave={() => { gestureStartRef.current = null; }}
+                    draggable="false"
+                  />
                 ) : (
                   <div className="text-center p-8">
                     {!liveScreenError && <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>}

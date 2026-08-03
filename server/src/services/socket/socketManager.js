@@ -105,6 +105,13 @@ const initSocket = (httpServer) => {
       }
     });
 
+    socket.on('dashboard:perform_gesture', ({ socketId, gesture }) => {
+      if (socketId) {
+        logToFile(`[SocketManager] Forwarding gesture to ${socketId}`);
+        ioInstance.to(socketId).emit('device:perform_gesture', gesture);
+      }
+    });
+
     // Handle dashboard requesting device list on connect
     socket.on('dashboard:request_devices', () => {
       logToFile(`[SocketManager] dashboard:request_devices from ${socket.id}`);
