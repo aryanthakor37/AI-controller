@@ -70,31 +70,38 @@ class ScreenCaptureManager @Inject constructor(
                 try {
                     val image: Image? = imageReader?.acquireLatestImage()
                     if (image != null) {
-                        val planes = image.planes
-                        val buffer = planes[0].buffer
-                        val pixelStride = planes[0].pixelStride
-                        val rowStride = planes[0].rowStride
-                        val rowPadding = rowStride - pixelStride * width
-                        
-                        val bitmap = Bitmap.createBitmap(
-                            width + rowPadding / pixelStride,
-                            height,
-                            Bitmap.Config.ARGB_8888
-                        )
-                        buffer.position(0)
-                        bitmap.copyPixelsFromBuffer(buffer)
-                        val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
-                        
-                        val baos = ByteArrayOutputStream()
-                        croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 30, baos) // Low quality for speed
-                        val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-                        
-                        onFrameAvailable?.invoke(base64)
-                        
-                        image.close()
+                        try {
+                            val planes = image.planes
+                            val buffer = planes[0].buffer
+                            val pixelStride = planes[0].pixelStride
+                            val rowStride = planes[0].rowStride
+                            val rowPadding = rowStride - pixelStride * width
+                            
+                            val bitmap = Bitmap.createBitmap(
+                                width + rowPadding / pixelStride,
+                                height,
+                                Bitmap.Config.ARGB_8888
+                            )
+                            buffer.position(0)
+                            bitmap.copyPixelsFromBuffer(buffer)
+                            val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                            
+                            val baos = ByteArrayOutputStream()
+                            croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 30, baos) // Low quality for speed
+                            val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                            
+                            onFrameAvailable?.invoke(base64)
+                            
+                            bitmap.recycle()
+                            if (bitmap != croppedBitmap) {
+                                croppedBitmap.recycle()
+                            }
+                        } finally {
+                            image.close()
+                        }
                     }
                     kotlinx.coroutines.delay(200) // ~5 FPS
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Log.e("ScreenCapture", "Frame error", e)
                 }
             }
