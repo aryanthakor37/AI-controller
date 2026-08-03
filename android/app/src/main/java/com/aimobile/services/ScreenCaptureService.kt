@@ -50,8 +50,8 @@ class ScreenCaptureService : Service() {
 
         if (resultCode == -1 && data != null) {
             try {
-                screenCaptureManager.initProjection(resultCode, data, this)
                 startForeground(NOTIFICATION_ID, createNotification(), type)
+                screenCaptureManager.initProjection(resultCode, data, this)
                 screenCaptureManager.startStream(this)
             } catch (e: Exception) {
                 screenCaptureManager.onError?.invoke("Service error: ${e.message}")
