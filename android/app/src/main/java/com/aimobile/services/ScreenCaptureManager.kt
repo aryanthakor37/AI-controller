@@ -101,11 +101,21 @@ class ScreenCaptureManager @Inject constructor(
     }
 
     fun stopStream() {
+        if (!isStreaming) return
         isStreaming = false
         captureJob?.cancel()
         virtualDisplay?.release()
         imageReader?.close()
         mediaProjection?.stop()
+        
+        virtualDisplay = null
+        imageReader = null
         mediaProjection = null
+        captureJob = null
+
+        val stopIntent = Intent(context, ScreenCaptureService::class.java).apply {
+            action = "STOP"
+        }
+        context.startService(stopIntent)
     }
 }

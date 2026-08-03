@@ -405,16 +405,26 @@ class IntentRouter(private val context: Context) {
                                                     // Hardware bitmaps cannot be compressed directly. Must copy to software bitmap.
                                                     val softwareBitmap = bitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
                                                     
+                                                    // Scale down to prevent OutOfMemoryError and reduce payload size
+                                                    val scaledBitmap = android.graphics.Bitmap.createScaledBitmap(
+                                                        softwareBitmap, 
+                                                        softwareBitmap.width / 2, 
+                                                        softwareBitmap.height / 2, 
+                                                        true
+                                                    )
+                                                    
                                                     val baos = java.io.ByteArrayOutputStream()
-                                                    softwareBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 60, baos)
+                                                    scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 60, baos)
                                                     val base64 = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
                                                     continuation.resumeWith(Result.success(CommandResult("Success", "Screenshot captured", "SCREENSHOT:$base64")))
+                                                    
                                                     softwareBitmap.recycle()
+                                                    scaledBitmap.recycle()
                                                 } else {
                                                     continuation.resumeWith(Result.success(CommandResult("Failed", "Failed to wrap buffer")))
                                                 }
                                                 hwBuffer.close()
-                                            } catch (e: Exception) {
+                                            } catch (e: Throwable) {
                                                 continuation.resumeWith(Result.success(CommandResult("Failed", "Error converting screenshot: ${e.message}")))
                                             }
                                         }
