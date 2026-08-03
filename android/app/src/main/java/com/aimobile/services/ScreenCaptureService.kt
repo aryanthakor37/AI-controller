@@ -58,6 +58,7 @@ class ScreenCaptureService : Service() {
                 stopSelf()
             }
         } else {
+            screenCaptureManager.onError?.invoke("Screen capture permission denied by user or system.")
             startForeground(NOTIFICATION_ID, createNotification(), type)
             stopSelf()
         }
