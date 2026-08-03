@@ -32,6 +32,7 @@ class ScreenCaptureManager @Inject constructor(
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
     private var isStreaming = false
+    private var firstFrameReceived = false
     private var handlerThread: android.os.HandlerThread? = null
     private var handler: android.os.Handler? = null
 
@@ -56,6 +57,7 @@ class ScreenCaptureManager @Inject constructor(
     private fun startStream(serviceContext: Context) {
         if (isStreaming) return
         isStreaming = true
+        firstFrameReceived = false
 
         try {
             val metrics = serviceContext.resources.displayMetrics
@@ -76,6 +78,10 @@ class ScreenCaptureManager @Inject constructor(
         
         imageReader?.setOnImageAvailableListener({ reader ->
             if (!isStreaming) return@setOnImageAvailableListener
+            if (!firstFrameReceived) {
+                firstFrameReceived = true
+                onError?.invoke("DEBUG: First frame received from ImageReader!")
+            }
             try {
                 val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
                 try {
@@ -114,12 +120,14 @@ class ScreenCaptureManager @Inject constructor(
         }, handler)
 
         try {
+            val flags = DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR or DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
             virtualDisplay = mediaProjection?.createVirtualDisplay(
                 "ScreenStream",
                 width, height, density,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                flags,
                 imageReader?.surface, null, handler
             )
+            onError?.invoke("DEBUG: VirtualDisplay created successfully!")
         } catch (e: Throwable) {
             onError?.invoke("VirtualDisplay error: ${e.message}")
         }
