@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Smartphone, Battery, Wifi, Cpu, HardDrive, 
   ShieldCheck, Zap, RefreshCw, Search, Key, 
-  CheckCircle2, AlertTriangle, Radio
+  CheckCircle2, AlertTriangle, Radio, MonitorPlay, X
 } from 'lucide-react';
 import { Card } from '../components/atoms/Card';
 import { Button } from '../components/atoms/Button';
@@ -19,6 +19,11 @@ const Device = () => {
   const [pairingCode, setPairingCode] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [actionSuccess, setActionSuccess] = useState(null);
+  
+  // New states for Screenshot and Live Screen
+  const [screenshotData, setScreenshotData] = useState(null);
+  const [liveScreenActiveDevice, setLiveScreenActiveDevice] = useState(null);
+  const [liveScreenFrame, setLiveScreenFrame] = useState(null);
 
   const fetchDevices = async () => {
     try {
@@ -33,9 +38,23 @@ const Device = () => {
   };
 
   useEffect(() => {
-    // socketService.connect(); // Managed by DashboardLayout
     fetchDevices();
-    // return () => socketService.disconnect(); // Managed by DashboardLayout
+
+    const handleScreenshotResult = (data) => {
+      setScreenshotData(data.image);
+    };
+
+    const handleScreenFrame = (data) => {
+      setLiveScreenFrame(data.frame);
+    };
+
+    socketService.socket?.on('dashboard:screenshot_result', handleScreenshotResult);
+    socketService.socket?.on('dashboard:screen_frame', handleScreenFrame);
+
+    return () => {
+      socketService.socket?.off('dashboard:screenshot_result', handleScreenshotResult);
+      socketService.socket?.off('dashboard:screen_frame', handleScreenFrame);
+    };
   }, []);
 
   const handleGeneratePairingCode = async () => {
@@ -253,12 +272,23 @@ const Device = () => {
                 >
                   📷 Camera
                 </button>
-                <button 
+                <Button 
+                  variant="primary" 
+                  className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-sm py-2"
                   onClick={() => triggerDeviceCommand(device.socketId, 'TAKE_SCREENSHOT', device.deviceName)}
-                  className="px-3 py-2 text-xs bg-white/5 hover:bg-primary/20 hover:text-primary text-slate-300 rounded-lg transition-colors text-center border border-white/5"
                 >
                   📸 Screenshot
-                </button>
+                </Button>
+                <Button 
+                  variant="primary" 
+                  className="w-full justify-center bg-slate-800 hover:bg-indigo-600 text-sm py-2"
+                  onClick={() => {
+                    setLiveScreenActiveDevice(device.socketId);
+                    triggerDeviceCommand(device.socketId, 'START_SCREEN_STREAM', device.deviceName);
+                  }}
+                >
+                  <MonitorPlay className="w-4 h-4 mr-2" /> Live Screen
+                </Button>
                 <button 
                   onClick={() => triggerDeviceCommand(device.socketId, 'TOGGLE_WIFI', device.deviceName)}
                   className="px-3 py-2 text-xs bg-white/5 hover:bg-primary/20 hover:text-primary text-slate-300 rounded-lg transition-colors text-center border border-white/5"
@@ -294,6 +324,92 @@ const Device = () => {
           </div>
         )}
       </div>
+
+      {/* Screenshot Modal */}
+      <AnimatePresence>
+        {screenshotData && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900 border border-slate-700 rounded-xl overflow-hidden max-w-2xl w-full"
+            >
+              <div className="flex justify-between items-center p-4 border-b border-slate-800">
+                <h3 className="text-lg font-bold text-white">Device Screenshot</h3>
+                <button onClick={() => setScreenshotData(null)} className="text-slate-400 hover:text-white">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-4 flex justify-center bg-slate-950">
+                <img src={`data:image/jpeg;base64,${screenshotData}`} alt="Screenshot" className="max-h-[70vh] rounded-lg shadow-2xl" />
+              </div>
+              <div className="p-4 border-t border-slate-800 flex justify-end">
+                <a 
+                  href={`data:image/jpeg;base64,${screenshotData}`} 
+                  download={`screenshot_${new Date().getTime()}.jpg`}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
+                >
+                  Download Image
+                </a>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Live Screen Modal */}
+      <AnimatePresence>
+        {liveScreenActiveDevice && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-slate-900 border border-indigo-500/50 rounded-2xl overflow-hidden max-w-sm w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]"
+            >
+              <div className="flex justify-between items-center p-4 bg-slate-900 border-b border-slate-800">
+                <div className="flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse mr-2"></div>
+                  <h3 className="text-sm font-bold text-white tracking-wider">LIVE STREAM</h3>
+                </div>
+                <button 
+                  onClick={() => {
+                    triggerDeviceCommand(liveScreenActiveDevice, 'STOP_SCREEN_STREAM', 'Device');
+                    setLiveScreenActiveDevice(null);
+                    setLiveScreenFrame(null);
+                  }} 
+                  className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-1 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="bg-black flex justify-center items-center min-h-[60vh] relative">
+                {liveScreenFrame ? (
+                  <img src={`data:image/jpeg;base64,${liveScreenFrame}`} alt="Live Screen" className="w-full h-full object-contain" />
+                ) : (
+                  <div className="text-center p-8">
+                    <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-slate-400 text-sm">Waiting for device to accept prompt...</p>
+                    <p className="text-slate-500 text-xs mt-2">Please click 'Start Now' on your phone</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };

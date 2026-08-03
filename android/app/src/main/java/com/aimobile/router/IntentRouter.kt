@@ -391,15 +391,54 @@ class IntentRouter(private val context: Context) {
                 "TAKE_SCREENSHOT" -> {
                     val service = com.aimobile.accessibility.MyAccessibilityService.instance
                     if (service != null) {
-                        val success = service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
-                        if (success) {
-                            CommandResult("Success", "Screenshot captured")
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                            kotlin.coroutines.suspendCoroutine { continuation ->
+                                service.takeScreenshot(
+                                    android.view.Display.DEFAULT_DISPLAY,
+                                    context.mainExecutor,
+                                    object : android.accessibilityservice.AccessibilityService.TakeScreenshotCallback {
+                                        override fun onSuccess(screenshot: android.accessibilityservice.AccessibilityService.ScreenshotResult) {
+                                            try {
+                                                val hwBuffer = screenshot.hardwareBuffer
+                                                val bitmap = android.graphics.Bitmap.wrapHardwareBuffer(hwBuffer, screenshot.colorSpace)
+                                                if (bitmap != null) {
+                                                    val baos = java.io.ByteArrayOutputStream()
+                                                    bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 60, baos)
+                                                    val base64 = android.util.Base64.encodeToString(baos.toByteArray(), android.util.Base64.NO_WRAP)
+                                                    continuation.resumeWith(Result.success(CommandResult("Success", "Screenshot captured", "SCREENSHOT:$base64")))
+                                                } else {
+                                                    continuation.resumeWith(Result.success(CommandResult("Failed", "Failed to wrap buffer")))
+                                                }
+                                                hwBuffer.close()
+                                            } catch (e: Exception) {
+                                                continuation.resumeWith(Result.success(CommandResult("Failed", "Error converting screenshot: ${e.message}")))
+                                            }
+                                        }
+                                        override fun onFailure(errorCode: Int) {
+                                            continuation.resumeWith(Result.success(CommandResult("Failed", "Screenshot failed code: $errorCode")))
+                                        }
+                                    }
+                                )
+                            }
                         } else {
-                            CommandResult("Failed", "Screenshot failed")
+                            val success = service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
+                            CommandResult(if (success) "Success" else "Failed", "Screenshot executed (Saved to gallery)")
                         }
                     } else {
                         CommandResult("Failed", "Accessibility service not running")
                     }
+                }
+                
+                "START_SCREEN_STREAM" -> {
+                    val streamIntent = android.content.Intent(context, com.aimobile.services.ScreenCaptureActivity::class.java)
+                    streamIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(streamIntent)
+                    CommandResult("Success", "Starting live screen stream...")
+                }
+                
+                "STOP_SCREEN_STREAM" -> {
+                    com.aimobile.managers.ConnectionManager.instance?.stopScreenStream()
+                    CommandResult("Success", "Stopped screen stream")
                 }
                 
                 else -> CommandResult(status = "Unsupported", message = "Unknown intent: ${request.intent}")

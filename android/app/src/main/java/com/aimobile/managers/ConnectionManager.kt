@@ -3,6 +3,7 @@ package com.aimobile.managers
 import android.content.Context
 import android.util.Log
 import com.aimobile.command.CommandDispatcher
+import com.aimobile.services.ScreenCaptureManager
 import com.aimobile.utils.TokenManager
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,11 +20,26 @@ import javax.inject.Singleton
 class ConnectionManager @Inject constructor(
     private val deviceInfoManager: DeviceInfoManager,
     private val tokenManager: TokenManager,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val commandDispatcher: CommandDispatcher,
+    private val screenCaptureManager: ScreenCaptureManager
 ) {
     private var socket: Socket? = null
-    private val commandDispatcher = CommandDispatcher(context)
     private val gson = Gson()
+    
+    companion object {
+        var instance: ConnectionManager? = null
+            private set
+    }
+    
+    init {
+        instance = this
+        screenCaptureManager.onFrameAvailable = { base64Frame ->
+            val payload = org.json.JSONObject()
+            payload.put("frame", base64Frame)
+            socket?.emit("device:screen_frame", payload)
+        }
+    }
     
     private val _connectionState = MutableStateFlow(false)
     val connectionState: StateFlow<Boolean> = _connectionState
@@ -84,6 +100,14 @@ class ConnectionManager @Inject constructor(
                     commandDispatcher.dispatchCommand(rawJson) { result ->
                         // Send result back to server
                         val resultJson = JSONObject(gson.toJson(result))
+                        
+                        if (result.data?.startsWith("SCREENSHOT:") == true) {
+                            val payload = JSONObject()
+                            payload.put("image", result.data.substring(11))
+                            socket?.emit("device:screenshot_result", payload)
+                            resultJson.put("data", "Screenshot sent to Dashboard")
+                        }
+                        
                         socket?.emit("command:result", resultJson)
                     }
                 }
@@ -93,6 +117,10 @@ class ConnectionManager @Inject constructor(
         } catch (e: URISyntaxException) {
             Log.e("ConnectionManager", "Socket URL error", e)
         }
+    }
+
+    fun stopScreenStream() {
+        screenCaptureManager.stopStream()
     }
 
     fun disconnect() {

@@ -68,6 +68,23 @@ const initSocket = (httpServer) => {
     });
 
     // Handle commands from Dashboard
+    socket.on('device:screenshot_result', (data) => {
+      // Forward the screenshot result to all connected dashboards
+      ioInstance.emit('dashboard:screenshot_result', {
+        socketId: socket.id,
+        image: data.image
+      });
+    });
+
+    socket.on('device:screen_frame', (data) => {
+      // Forward the live screen frame to all connected dashboards
+      ioInstance.emit('dashboard:screen_frame', {
+        socketId: socket.id,
+        frame: data.frame
+      });
+    });
+
+    // Handle commands from Dashboard
     socket.on('dashboard:send_command', ({ deviceId, command }) => {
       logToFile(`[SocketManager] Sending command to ${deviceId}: ${JSON.stringify(command)}`);
       if (deviceId === 'all') {

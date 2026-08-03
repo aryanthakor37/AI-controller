@@ -77,6 +77,10 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".services.ScreenCaptureActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true" />
+
         <service
             android:name=".services.MainService"
             android:exported="false"
