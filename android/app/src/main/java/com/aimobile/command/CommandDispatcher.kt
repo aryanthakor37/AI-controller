@@ -9,8 +9,14 @@ import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class CommandDispatcher(private val context: Context) {
+@Singleton
+class CommandDispatcher @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     private val intentRouter = IntentRouter(context)
     private val gson = Gson()
