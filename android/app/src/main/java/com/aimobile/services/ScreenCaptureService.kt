@@ -39,13 +39,8 @@ class ScreenCaptureService : Service() {
             return START_NOT_STICKY
         }
 
-        val resultCode = intent?.getIntExtra("resultCode", -1) ?: -1
-        val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent?.getParcelableExtra("data", Intent::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent?.getParcelableExtra("data")
-        }
+        val resultCode = screenCaptureManager.pendingResultCode
+        val data = screenCaptureManager.pendingData
 
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION

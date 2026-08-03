@@ -34,6 +34,9 @@ class ScreenCaptureManager @Inject constructor(
     private var captureJob: Job? = null
     private var isStreaming = false
 
+    var pendingResultCode: Int = -1
+    var pendingData: Intent? = null
+
     var onFrameAvailable: ((String) -> Unit)? = null
 
     fun startProjection(resultCode: Int, data: Intent, serviceContext: Context) {
@@ -52,9 +55,11 @@ class ScreenCaptureManager @Inject constructor(
         if (isStreaming) return
         isStreaming = true
 
-        val metrics = context.resources.displayMetrics
-        val width = 720 // Downscale for stream performance
-        val height = (width * metrics.heightPixels) / metrics.widthPixels
+        val metrics = serviceContext.resources.displayMetrics
+        val width = 360 // Downscale significantly for fast stream
+        var height = (width * metrics.heightPixels) / metrics.widthPixels
+        if (height % 2 != 0) height++
+
         val density = metrics.densityDpi
 
         imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
@@ -87,7 +92,7 @@ class ScreenCaptureManager @Inject constructor(
                             val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
                             
                             val baos = ByteArrayOutputStream()
-                            croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 30, baos) // Low quality for speed
+                            croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 20, baos) // Low quality for speed
                             val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
                             
                             onFrameAvailable?.invoke(base64)

@@ -23,10 +23,9 @@ class ScreenCaptureActivity : ComponentActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
-            val serviceIntent = Intent(this, ScreenCaptureService::class.java).apply {
-                putExtra("resultCode", resultCode)
-                putExtra("data", data)
-            }
+            screenCaptureManager.pendingResultCode = resultCode
+            screenCaptureManager.pendingData = data
+            val serviceIntent = Intent(this, ScreenCaptureService::class.java)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 startForegroundService(serviceIntent)
             } else {
