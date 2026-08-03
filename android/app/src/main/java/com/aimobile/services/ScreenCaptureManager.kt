@@ -31,8 +31,9 @@ class ScreenCaptureManager @Inject constructor(
     private var mediaProjection: MediaProjection? = null
     private var virtualDisplay: VirtualDisplay? = null
     private var imageReader: ImageReader? = null
-    private var captureJob: Job? = null
     private var isStreaming = false
+    private var handlerThread: android.os.HandlerThread? = null
+    private var handler: android.os.Handler? = null
 
     var pendingResultCode: Int = -1
     var pendingData: Intent? = null
@@ -62,69 +63,72 @@ class ScreenCaptureManager @Inject constructor(
 
         val density = metrics.densityDpi
 
+        handlerThread = android.os.HandlerThread("ScreenCaptureThread")
+        handlerThread?.start()
+        handler = android.os.Handler(handlerThread!!.looper)
+
         imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
+        
+        imageReader?.setOnImageAvailableListener({ reader ->
+            if (!isStreaming) return@setOnImageAvailableListener
+            try {
+                val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
+                try {
+                    val planes = image.planes
+                    val buffer = planes[0].buffer
+                    val pixelStride = planes[0].pixelStride
+                    val rowStride = planes[0].rowStride
+                    val rowPadding = rowStride - pixelStride * width
+                    
+                    val bitmap = Bitmap.createBitmap(
+                        width + rowPadding / pixelStride,
+                        height,
+                        Bitmap.Config.ARGB_8888
+                    )
+                    buffer.position(0)
+                    bitmap.copyPixelsFromBuffer(buffer)
+                    val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                    
+                    val baos = ByteArrayOutputStream()
+                    croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 20, baos)
+                    val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+                    
+                    onFrameAvailable?.invoke(base64)
+                    
+                    bitmap.recycle()
+                    if (bitmap != croppedBitmap) {
+                        croppedBitmap.recycle()
+                    }
+                } finally {
+                    image.close()
+                }
+            } catch (e: Throwable) {
+                Log.e("ScreenCapture", "Frame error", e)
+            }
+        }, handler)
+
         virtualDisplay = mediaProjection?.createVirtualDisplay(
             "ScreenStream",
             width, height, density,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            imageReader?.surface, null, null
+            imageReader?.surface, null, handler
         )
-
-        captureJob = CoroutineScope(Dispatchers.IO).launch {
-            while (isActive && isStreaming) {
-                try {
-                    val image: Image? = imageReader?.acquireLatestImage()
-                    if (image != null) {
-                        try {
-                            val planes = image.planes
-                            val buffer = planes[0].buffer
-                            val pixelStride = planes[0].pixelStride
-                            val rowStride = planes[0].rowStride
-                            val rowPadding = rowStride - pixelStride * width
-                            
-                            val bitmap = Bitmap.createBitmap(
-                                width + rowPadding / pixelStride,
-                                height,
-                                Bitmap.Config.ARGB_8888
-                            )
-                            buffer.position(0)
-                            bitmap.copyPixelsFromBuffer(buffer)
-                            val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
-                            
-                            val baos = ByteArrayOutputStream()
-                            croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 20, baos) // Low quality for speed
-                            val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
-                            
-                            onFrameAvailable?.invoke(base64)
-                            
-                            bitmap.recycle()
-                            if (bitmap != croppedBitmap) {
-                                croppedBitmap.recycle()
-                            }
-                        } finally {
-                            image.close()
-                        }
-                    }
-                    kotlinx.coroutines.delay(200) // ~5 FPS
-                } catch (e: Throwable) {
-                    Log.e("ScreenCapture", "Frame error", e)
-                }
-            }
-        }
     }
 
     fun stopStream() {
         if (!isStreaming) return
         isStreaming = false
-        captureJob?.cancel()
+        
+        handlerThread?.quitSafely()
         virtualDisplay?.release()
         imageReader?.close()
         mediaProjection?.stop()
         
+        handlerThread = null
+        handler = null
         virtualDisplay = null
         imageReader = null
         mediaProjection = null
-        captureJob = null
 
         val stopIntent = Intent(context, ScreenCaptureService::class.java).apply {
             action = "STOP"
