@@ -36,19 +36,19 @@ class ScreenCaptureManager @Inject constructor(
 
     var onFrameAvailable: ((String) -> Unit)? = null
 
-    fun startProjection(resultCode: Int, data: Intent) {
-        val projectionManager = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+    fun startProjection(resultCode: Int, data: Intent, serviceContext: Context) {
+        val projectionManager = serviceContext.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = projectionManager.getMediaProjection(resultCode, data)
         mediaProjection?.registerCallback(object : MediaProjection.Callback() {
             override fun onStop() {
                 stopStream()
             }
         }, null)
-        startStream()
+        startStream(serviceContext)
     }
 
     @SuppressLint("WrongConstant")
-    private fun startStream() {
+    private fun startStream(serviceContext: Context) {
         if (isStreaming) return
         isStreaming = true
 
@@ -81,6 +81,7 @@ class ScreenCaptureManager @Inject constructor(
                             height,
                             Bitmap.Config.ARGB_8888
                         )
+                        buffer.position(0)
                         bitmap.copyPixelsFromBuffer(buffer)
                         val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
                         
