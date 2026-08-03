@@ -378,6 +378,19 @@ class IntentRouter(private val context: Context) {
                         CommandResult("Success", msg.ifEmpty { "Chat processed" })
                     }
                 }
+                "TAKE_SCREENSHOT" -> {
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    if (service != null) {
+                        val success = service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
+                        if (success) {
+                            CommandResult("Success", "Screenshot captured")
+                        } else {
+                            CommandResult("Failed", "Screenshot failed")
+                        }
+                    } else {
+                        CommandResult("Failed", "Accessibility service not running")
+                    }
+                }
                 
                 else -> CommandResult(status = "Unsupported", message = "Unknown intent: ${request.intent}")
             }
