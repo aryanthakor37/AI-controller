@@ -23,8 +23,23 @@ class CommandDispatcher(private val context: Context) {
                 val request = gson.fromJson(jsonString, CommandRequest::class.java)
                 
                 if (request != null && !request.intent.isNullOrEmpty()) {
-                    val result = intentRouter.route(request)
-                    onResult(result)
+                    if (request.intent == "MULTI_COMMAND" && request.commands != null) {
+                        val results = mutableListOf<String>()
+                        var anyFailed = false
+                        for (cmd in request.commands) {
+                            val res = intentRouter.route(cmd)
+                            results.add("${cmd.intent}: ${res.status}")
+                            if (res.status == "Failed") anyFailed = true
+                            
+                            // Delay to allow UI interactions (like Quick Settings) to settle before the next command
+                            kotlinx.coroutines.delay(1500)
+                        }
+                        val finalStatus = if (anyFailed) "Partial/Failed" else "Success"
+                        onResult(CommandResult(finalStatus, results.joinToString(" | ")))
+                    } else {
+                        val result = intentRouter.route(request)
+                        onResult(result)
+                    }
                 } else {
                     onResult(CommandResult("Failed", "Invalid or missing intent field in JSON"))
                 }

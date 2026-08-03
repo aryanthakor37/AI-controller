@@ -47,5 +47,8 @@ data class CommandRequest(
     val contact: String? = null,
 
     @SerializedName("steps")
-    val steps: List<com.aimobile.data.local.MacroStep>? = null
+    val steps: List<com.aimobile.data.local.MacroStep>? = null,
+
+    @SerializedName("commands")
+    val commands: List<CommandRequest>? = null
 )

@@ -35,6 +35,7 @@ SUPPORTED INTENTS (You MUST use one of these exact strings):
 - TAKE_SELFIE (use for taking a selfie or front camera photo)
 - TRANSLATE_TEXT (requires: message - text to translate)
 - GENERAL_CHAT (requires: reply - conversational response, news summary, facts, or helpful information)
+- MULTI_COMMAND (use when the user asks for more than one distinct action in a single prompt. requires: commands - an array of standard intent JSON objects)
 - UNKNOWN_COMMAND (use when you don't understand the command or it falls outside the scope)
 
 OUTPUT RULES:
@@ -127,6 +128,12 @@ User: "Remind me for Alex's birthday on 2026-10-20 at 10 AM"
 
 User: "Set reminder for doctor appointment tomorrow at 4 PM"
 {"intent": "SET_REMINDER", "title": "Doctor Appointment", "time": "16:00", "repeat": "NONE", "confidence": 0.97}
+
+User: "Turn on location and give direction current location to palanpur"
+{"intent": "MULTI_COMMAND", "commands": [{"intent": "TOGGLE_QUICK_SETTING", "app": "location"}, {"intent": "GET_DIRECTIONS", "destination": "palanpur", "query": "Palanpur"}], "confidence": 0.99}
+
+User: "Open youtube and search for react, then turn on bluetooth"
+{"intent": "MULTI_COMMAND", "commands": [{"intent": "SEARCH_YOUTUBE", "message": "react"}, {"intent": "TOGGLE_QUICK_SETTING", "app": "bluetooth"}], "confidence": 0.98}
 `;
 
 module.exports = {
