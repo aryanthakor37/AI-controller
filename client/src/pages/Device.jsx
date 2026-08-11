@@ -42,7 +42,6 @@ const Device = () => {
   useEffect(() => {
     fetchDevices();
 
-    let attached = false;
     const handleScreenshotResult = (data) => {
       setScreenshotData(data.image);
     };
@@ -56,25 +55,14 @@ const Device = () => {
       setLiveScreenError(data.error);
     };
 
-    const attachListeners = () => {
-      if (socketService.socket && !attached) {
-        socketService.socket.on('dashboard:screenshot_result', handleScreenshotResult);
-        socketService.socket.on('dashboard:screen_frame', handleScreenFrame);
-        socketService.socket.on('dashboard:screen_frame_error', handleScreenFrameError);
-        attached = true;
-      }
-    };
-
-    attachListeners();
-    const interval = setInterval(attachListeners, 500);
+    socketService.socket?.on('dashboard:screenshot_result', handleScreenshotResult);
+    socketService.socket?.on('dashboard:screen_frame', handleScreenFrame);
+    socketService.socket?.on('dashboard:screen_frame_error', handleScreenFrameError);
 
     return () => {
-      clearInterval(interval);
-      if (attached && socketService.socket) {
-        socketService.socket.off('dashboard:screenshot_result', handleScreenshotResult);
-        socketService.socket.off('dashboard:screen_frame', handleScreenFrame);
-        socketService.socket.off('dashboard:screen_frame_error', handleScreenFrameError);
-      }
+      socketService.socket?.off('dashboard:screenshot_result', handleScreenshotResult);
+      socketService.socket?.off('dashboard:screen_frame', handleScreenFrame);
+      socketService.socket?.off('dashboard:screen_frame_error', handleScreenFrameError);
     };
   }, [dispatch]);
 

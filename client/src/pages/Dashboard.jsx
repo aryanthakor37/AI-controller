@@ -93,18 +93,12 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="relative w-full min-h-screen">
-      {/* Background Animated Blobs */}
-      <div className="absolute top-20 left-10 w-96 h-96 bg-primary/20 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-blob pointer-events-none"></div>
-      <div className="absolute top-40 right-20 w-72 h-72 bg-accent-cyan/20 rounded-full mix-blend-screen filter blur-[100px] opacity-50 animate-blob animation-delay-2000 pointer-events-none"></div>
-      <div className="absolute -bottom-8 left-40 w-80 h-80 bg-accent-indigo/30 rounded-full mix-blend-screen filter blur-[120px] opacity-50 animate-blob animation-delay-4000 pointer-events-none"></div>
-
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="relative z-10 w-full pb-10"
-      >
+    <motion.div
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="w-full pb-10"
+    >
       <motion.div variants={item} className="flex justify-between items-end mb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white/90">Overview</h1>
@@ -125,7 +119,7 @@ const Dashboard = () => {
                 else alert(data.message);
               } catch (e) { alert('Failed to generate code'); }
             }}
-            className="btn-space flex items-center px-5 py-2.5 text-sm font-medium hover:bg-primary/20 hover:border-primary/50 text-white shadow-[0_0_15px_rgba(255,0,127,0.3)] hover:shadow-[0_0_25px_rgba(255,0,127,0.6)] transition-all duration-300"
+            className="btn-space-primary flex items-center px-4 py-2.5 text-sm"
           >
             <Plus className="w-4 h-4 mr-2" />
             Pair New Device
@@ -139,49 +133,49 @@ const Dashboard = () => {
         {/* ROW 1: Analytics */}
         {analytics && (
           <motion.div variants={item} className="col-span-1 md:col-span-12 grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.05] transition-all duration-300 border-white/10 hover:border-primary/50 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-primary/40 transition-colors duration-500"></div>
+            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors border-white/5 hover:border-white/10 shadow-none relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
               <div className="flex justify-between items-start mb-6">
-                <p className="text-[11px] font-bold text-white/50 uppercase tracking-[0.2em]">Total API Commands</p>
-                <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]">+14%</span>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Total API Commands</p>
+                <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">+14%</span>
               </div>
-              <p className="text-5xl font-light text-white tracking-tighter drop-shadow-md">{analytics.totalCommands || 0}</p>
+              <p className="text-5xl font-light text-white tracking-tighter">{analytics.totalCommands || 0}</p>
             </Card>
-            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.05] transition-all duration-300 border-white/10 hover:border-accent-indigo/50 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent-indigo/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-accent-indigo/40 transition-colors duration-500"></div>
+            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors border-white/5 hover:border-white/10 shadow-none relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent-indigo/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
               <div className="flex justify-between items-start mb-6">
-                <p className="text-[11px] font-bold text-white/50 uppercase tracking-[0.2em]">Success Rate</p>
-                <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]">Optimal</span>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Success Rate</p>
+                <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">Optimal</span>
               </div>
-              <p className="text-5xl font-light text-white tracking-tighter drop-shadow-md">{analytics.successRate || 0}<span className="text-2xl text-white/30 ml-1">%</span></p>
+              <p className="text-5xl font-light text-white tracking-tighter">{analytics.successRate || 0}<span className="text-2xl text-white/30 ml-1">%</span></p>
             </Card>
-            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.05] transition-all duration-300 border-white/10 hover:border-red-500/50 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-red-500/40 transition-colors duration-500"></div>
+            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors border-white/5 hover:border-white/10 shadow-none relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
               <div className="flex justify-between items-start mb-6">
-                <p className="text-[11px] font-bold text-white/50 uppercase tracking-[0.2em]">Failed Executions</p>
-                <span className="text-[10px] font-bold text-white/60 bg-white/5 px-2 py-0.5 rounded border border-white/20 shadow-[0_0_10px_rgba(255,255,255,0.1)]">0 issues</span>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Failed Executions</p>
+                <span className="text-[10px] font-bold text-white/40 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">0 issues</span>
               </div>
-              <p className="text-5xl font-light text-white tracking-tighter drop-shadow-md">{analytics.failedCommands || 0}</p>
+              <p className="text-5xl font-light text-white tracking-tighter">{analytics.failedCommands || 0}</p>
             </Card>
-            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.05] transition-all duration-300 border-white/10 hover:border-accent-cyan/50 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent-cyan/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-accent-cyan/40 transition-colors duration-500"></div>
+            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors border-white/5 hover:border-white/10 shadow-none relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent-cyan/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
               <div className="flex justify-between items-start mb-6">
-                <p className="text-[11px] font-bold text-white/50 uppercase tracking-[0.2em]">Avg Latency</p>
-                <span className="text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20 shadow-[0_0_10px_rgba(250,204,21,0.2)]">Stable</span>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Avg Latency</p>
+                <span className="text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">Stable</span>
               </div>
-              <p className="text-5xl font-light text-white tracking-tighter drop-shadow-md">{analytics.avgSpeedMs || 0}<span className="text-2xl text-white/30 ml-2">ms</span></p>
+              <p className="text-5xl font-light text-white tracking-tighter">{analytics.avgSpeedMs || 0}<span className="text-2xl text-white/30 ml-2">ms</span></p>
             </Card>
           </motion.div>
         )}
 
         {/* ROW 2: Remote Control & Device Status */}
         <motion.div variants={item} className="col-span-1 md:col-span-8 flex flex-col">
-          <Card className="flex-grow p-6 flex flex-col group border-white/10 hover:border-white/20 transition-all duration-300">
+          <Card className="flex-grow p-6 flex flex-col border-white/5 shadow-none group">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-sm font-semibold text-white/90 flex items-center tracking-wider">
-                <Zap className="w-5 h-5 mr-2 text-primary animate-pulse-glow" /> Remote Control Matrix
+              <h2 className="text-sm font-semibold text-white/80 flex items-center tracking-wide">
+                <Zap className="w-4 h-4 mr-2 text-primary" /> Remote Control Matrix
               </h2>
-              <div className="w-2 h-2 rounded-full bg-primary/80 group-hover:bg-primary shadow-[0_0_10px_#FF007F] transition-all duration-300"></div>
+              <div className="w-2 h-2 rounded-full bg-primary/50 group-hover:bg-primary transition-colors"></div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-grow">
               <CommandButton intent="VOLUME_MUTE" icon={VolumeX} label="Silent Mode" destructive={true} />
@@ -336,8 +330,7 @@ const Dashboard = () => {
         </motion.div>
 
       </div>
-      </motion.div>
-    </div>
+    </motion.div>
   );
 };
 
