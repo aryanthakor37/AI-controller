@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Smartphone, Battery, Wifi, Cpu, HardDrive, 
   ShieldCheck, Zap, RefreshCw, Search, Key, 
-  CheckCircle2, AlertTriangle, Radio, MonitorPlay, X
+  CheckCircle2, AlertTriangle, Radio, MonitorPlay, X,
+  Maximize2, RotateCw, MousePointer2
 } from 'lucide-react';
 import { Card } from '../components/atoms/Card';
 import { Button } from '../components/atoms/Button';
@@ -416,7 +417,7 @@ const Device = () => {
                   exit={{ scale: 0.95 }}
                   className="bg-slate-950 border border-indigo-500/30 rounded-2xl overflow-hidden max-w-[400px] w-full shadow-[0_0_50px_rgba(99,102,241,0.15)] flex flex-col relative"
                 >
-                  <div className="flex justify-between items-center p-3.5 bg-slate-900/40 backdrop-blur-xl border-b border-white/10 z-20 absolute top-0 left-0 right-0">
+                  <div className="flex justify-between items-center p-3.5 bg-slate-900/40 backdrop-blur-xl border-b border-white/10 z-20 absolute top-0 left-0 right-0 rounded-t-2xl">
                     <div className="flex items-center">
                       <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse mr-2 shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
                       <h3 className="text-xs font-bold text-white tracking-wider mr-4">LIVE STREAM</h3>
@@ -447,12 +448,12 @@ const Device = () => {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="bg-black flex justify-center items-center h-[75vh] max-h-[800px] relative overflow-hidden">
+                  <div className="bg-transparent flex justify-center items-center h-[75vh] max-h-[800px] relative overflow-hidden">
                     {liveScreenFrame ? (
                       <>
                         {/* Blurred Background */}
                         <div 
-                          className="absolute inset-0 z-0 opacity-40 blur-2xl scale-110"
+                          className="absolute inset-0 z-0 opacity-60 blur-3xl scale-125"
                           style={{
                             backgroundImage: `url(data:image/jpeg;base64,${liveScreenFrame})`,
                             backgroundSize: 'cover',
@@ -469,6 +470,24 @@ const Device = () => {
                           onPointerLeave={() => { gestureStartRef.current = null; }}
                           draggable="false"
                         />
+
+                        {/* Floating Controls Island */}
+                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center space-x-2 bg-slate-900/60 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-full shadow-2xl">
+                          <button className="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-full transition-colors flex items-center justify-center group relative">
+                            <Maximize2 className="w-4 h-4" />
+                            <span className="absolute -top-8 bg-slate-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Fullscreen</span>
+                          </button>
+                          <div className="w-px h-4 bg-white/10"></div>
+                          <button className="p-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-full transition-colors flex items-center justify-center group relative">
+                            <RotateCw className="w-4 h-4" />
+                            <span className="absolute -top-8 bg-slate-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Rotate</span>
+                          </button>
+                          <div className="w-px h-4 bg-white/10"></div>
+                          <button className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-white/10 rounded-full transition-colors flex items-center justify-center group relative" title="Touch is active">
+                            <MousePointer2 className="w-4 h-4" />
+                            <span className="absolute -top-8 bg-slate-800 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Touch: ON</span>
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <div className="text-center p-8 z-10 relative mt-12">
