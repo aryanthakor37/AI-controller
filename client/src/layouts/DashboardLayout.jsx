@@ -67,8 +67,7 @@ const DashboardLayout = () => {
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-accent-purple/20 blur-[120px] rounded-full pointer-events-none" />
 
-        <header className="h-20 glass border-b border-white/5 flex items-center justify-between px-8 z-10">
-          <h2 className="text-xl font-semibold text-slate-200">Overview</h2>
+        <header className="h-20 glass border-b border-white/5 flex items-center justify-end px-8 z-10 flex-shrink-0">
           <div className="flex items-center space-x-4">
             <Link to="/dashboard/profile">
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-accent-indigo p-0.5 cursor-pointer hover:scale-105 transition-transform">

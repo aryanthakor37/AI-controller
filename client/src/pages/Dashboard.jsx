@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { getApiUrl } from '../config';
 import { motion } from 'framer-motion';
-import { Battery, HardDrive, Smartphone, Zap, Play, Wifi, Cake, Bell, Calendar, VolumeX, Volume2, Flashlight, MonitorPlay, Bluetooth } from 'lucide-react';
+import { Battery, HardDrive, Smartphone, Zap, Play, Wifi, Cake, Bell, Calendar, VolumeX, Volume2, Flashlight, MonitorPlay, Bluetooth, Loader2, Check, Plus, History } from 'lucide-react';
 import { Card } from '../components/atoms/Card';
 import socketService from '../services/socketService';
 
@@ -16,52 +16,29 @@ const Dashboard = () => {
   const [dbHistory, setDbHistory] = React.useState([]);
   const [analytics, setAnalytics] = React.useState(null);
   const [remindersList, setRemindersList] = React.useState([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [commandStatus, setCommandStatus] = React.useState({});
 
   useEffect(() => {
-    // socketService.connect(); // Managed by DashboardLayout
-    
-    // Fallback: Fetch active devices directly via HTTP to prevent Socket.IO race conditions on reload
-    fetch(`${getApiUrl()}/device/list-active`)
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.length > 0) {
-          dispatch({ type: 'device/setDevices', payload: data });
-        }
-      })
-      .catch(console.error);
-
-    // Fetch DB command execution history
+    setIsLoading(true);
     const token = localStorage.getItem('token');
-    fetch(`${getApiUrl()}/history`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
+
+    Promise.allSettled([
+      fetch(`${getApiUrl()}/device/list-active`).then(res => res.json()).then(data => {
+        if (data && data.length > 0) dispatch({ type: 'device/setDevices', payload: data });
+      }),
+      fetch(`${getApiUrl()}/history`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()).then(data => {
         if (Array.isArray(data)) setDbHistory(data);
-      })
-      .catch(console.error);
-
-    // Fetch analytics metrics
-    fetch(`${getApiUrl()}/analytics`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
+      }),
+      fetch(`${getApiUrl()}/analytics`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()).then(data => {
         if (data) setAnalytics(data);
-      })
-      .catch(console.error);
-
-    // Fetch real saved Birthday & Event Reminders
-    fetch(`${getApiUrl()}/reminders`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
+      }),
+      fetch(`${getApiUrl()}/reminders`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()).then(data => {
         if (Array.isArray(data)) setRemindersList(data);
       })
-      .catch(console.error);
-
-    // return () => socketService.disconnect(); // Managed by DashboardLayout
+    ]).finally(() => {
+      setIsLoading(false);
+    });
   }, [dispatch]);
 
   const container = {
@@ -79,30 +56,58 @@ const Dashboard = () => {
 
   const sendRemoteCommand = (intent) => {
     if (activeDevices.length > 0) {
-      const targetSocketId = activeDevices[0].socketId; 
+      const targetSocketId = activeDevices[0].socketId;
       socketService.sendCommand(targetSocketId, { intent });
-      alert(`${intent} command sent to device!`);
+
+      setCommandStatus(prev => ({ ...prev, [intent]: 'loading' }));
+      setTimeout(() => {
+        setCommandStatus(prev => ({ ...prev, [intent]: 'success' }));
+        setTimeout(() => {
+          setCommandStatus(prev => ({ ...prev, [intent]: null }));
+        }, 2000);
+      }, 800);
     } else {
       alert("No device connected!");
     }
   };
 
+  const CommandButton = ({ intent, icon: Icon, label, colorClass = "text-slate-400 hover:text-primary", destructive = false }) => {
+    const status = commandStatus[intent];
+    let btnClass = "btn-space flex flex-col items-center justify-center p-3 rounded-xl relative overflow-hidden group h-[80px] ";
+    btnClass += destructive ? "text-slate-400 hover:text-red-400 hover:bg-red-500/5" : colorClass;
+
+    return (
+      <button onClick={() => sendRemoteCommand(intent)} disabled={status === 'loading'} className={btnClass}>
+        <div className={`transition-transform duration-300 absolute inset-0 flex flex-col items-center justify-center ${status ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}>
+          <Icon className="w-6 h-6 mb-2 group-hover:scale-110 transition-transform" />
+          <span className="font-semibold text-sm">{label}</span>
+        </div>
+        <div className={`transition-transform duration-300 absolute inset-0 flex flex-col items-center justify-center ${status === 'loading' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </div>
+        <div className={`transition-transform duration-300 absolute inset-0 flex flex-col items-center justify-center ${status === 'success' ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>
+          <Check className="w-8 h-8 text-green-500 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+        </div>
+      </button>
+    );
+  };
+
   return (
-    <motion.div 
+    <motion.div
       variants={container}
       initial="hidden"
       animate="show"
-      className="space-y-6"
+      className="w-full pb-10"
     >
-      <motion.div variants={item} className="flex justify-between items-center mb-8">
+      <motion.div variants={item} className="flex justify-between items-end mb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user ? user.name : 'Developer'}</h1>
-          <p className="text-slate-400 mt-1">
-            {activeDevices.length > 0 ? `${activeDevices.length} device(s) online.` : 'No devices connected currently.'}
+          <h1 className="text-3xl font-bold tracking-tight text-white/90">Overview</h1>
+          <p className="text-white/40 mt-1 text-sm font-medium">
+            {activeDevices.length > 0 ? `${activeDevices.length} active device(s)` : 'System standing by. No active devices.'}
           </p>
         </div>
         <div className="flex space-x-4">
-          <button 
+          <button
             onClick={async () => {
               try {
                 const token = localStorage.getItem('token');
@@ -110,195 +115,220 @@ const Dashboard = () => {
                   headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
-                if(res.ok) alert(`Your Pairing Code is: ${data.pairingCode}`);
+                if (res.ok) alert(`Your Pairing Code is: ${data.pairingCode}`);
                 else alert(data.message);
-              } catch(e) { alert('Failed to generate code'); }
+              } catch (e) { alert('Failed to generate code'); }
             }}
-            className="flex items-center px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/50 rounded-xl hover:bg-blue-500/30 transition-colors"
+            className="btn-space-primary flex items-center px-4 py-2.5 text-sm"
           >
+            <Plus className="w-4 h-4 mr-2" />
             Pair New Device
           </button>
         </div>
       </motion.div>
 
-      {/* Remote Control Quick Actions */}
-      <motion.div variants={item} className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Remote Control (Testing)</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <button onClick={() => sendRemoteCommand("VOLUME_MUTE")} className="flex flex-col items-center justify-center p-4 bg-red-500/10 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors text-red-400">
-            <VolumeX className="w-6 h-6 mb-2" />
-            <span className="font-semibold text-sm">Silent Mode</span>
-          </button>
-          <button onClick={() => sendRemoteCommand("VOLUME_UNMUTE")} className="flex flex-col items-center justify-center p-4 bg-green-500/10 border border-green-500/20 rounded-xl hover:bg-green-500/20 transition-colors text-green-400">
-            <Volume2 className="w-6 h-6 mb-2" />
-            <span className="font-semibold text-sm">General Mode</span>
-          </button>
-          <button onClick={() => sendRemoteCommand("FLASHLIGHT_ON")} className="flex flex-col items-center justify-center p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl hover:bg-yellow-500/20 transition-colors text-yellow-400">
-            <Flashlight className="w-6 h-6 mb-2" />
-            <span className="font-semibold text-sm">Torch ON</span>
-          </button>
-          <button onClick={() => sendRemoteCommand("FLASHLIGHT_OFF")} className="flex flex-col items-center justify-center p-4 bg-slate-500/10 border border-slate-500/20 rounded-xl hover:bg-slate-500/20 transition-colors text-slate-400">
-            <Flashlight className="w-6 h-6 mb-2 opacity-50" />
-            <span className="font-semibold text-sm">Torch OFF</span>
-          </button>
-          <button onClick={() => sendRemoteCommand("OPEN_YOUTUBE")} className="flex flex-col items-center justify-center p-4 bg-red-600/10 border border-red-600/20 rounded-xl hover:bg-red-600/20 transition-colors text-red-500">
-            <MonitorPlay className="w-6 h-6 mb-2" />
-            <span className="font-semibold text-sm">Open YouTube</span>
-          </button>
-          <button onClick={() => sendRemoteCommand("OPEN_CAMERA")} className="flex flex-col items-center justify-center p-4 bg-primary/10 border border-primary/20 rounded-xl hover:bg-primary/20 transition-colors text-primary">
-            <Zap className="w-6 h-6 mb-2" />
-            <span className="font-semibold text-sm">Open Camera</span>
-          </button>
-          <button onClick={() => sendRemoteCommand("TOGGLE_WIFI")} className="flex flex-col items-center justify-center p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl hover:bg-blue-500/20 transition-colors text-blue-400">
-            <Wifi className="w-6 h-6 mb-2" />
-            <span className="font-semibold text-sm">Toggle Wi-Fi</span>
-          </button>
-          <button onClick={() => sendRemoteCommand("TOGGLE_BLUETOOTH")} className="flex flex-col items-center justify-center p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl hover:bg-indigo-500/20 transition-colors text-indigo-400">
-            <Bluetooth className="w-6 h-6 mb-2" />
-            <span className="font-semibold text-sm">Toggle Bluetooth</span>
-          </button>
-        </div>
-      </motion.div>
-
-      {/* Real-Time Connected Devices List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-        {activeDevices.map(device => (
-          <motion.div variants={item} key={device.socketId}>
-            <Card className="flex flex-col space-y-4 border-t-4 border-t-green-500">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-                  <h3 className="text-xl font-bold">{device.deviceName}</h3>
-                </div>
-                <div className="flex items-center space-x-1 text-xs font-mono text-slate-400 bg-surface px-2 py-1 rounded-md">
-                  <Wifi className="w-3 h-3 text-green-400" />
-                  <span className={device.latency > 300 ? 'text-yellow-400' : 'text-green-400'}>
-                    {device.latency || 0}ms
-                  </span>
-                </div>
+      {/* BENTO GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+        
+        {/* ROW 1: Analytics */}
+        {analytics && (
+          <motion.div variants={item} className="col-span-1 md:col-span-12 grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors border-white/5 hover:border-white/10 shadow-none relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+              <div className="flex justify-between items-start mb-6">
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Total API Commands</p>
+                <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">+14%</span>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm mt-4">
-                <div>
-                  <p className="text-slate-400 mb-1 flex items-center"><Battery className="w-4 h-4 mr-1" /> Battery</p>
-                  <p className="font-semibold text-white">{device.batteryPercentage}%</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 mb-1 flex items-center"><Smartphone className="w-4 h-4 mr-1" /> Android</p>
-                  <p className="font-semibold text-white">{device.androidVersion}</p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 pt-2 border-t border-white/5">
-                Last Seen: {new Date(device.lastSeen).toLocaleTimeString()}
-              </p>
+              <p className="text-5xl font-light text-white tracking-tighter">{analytics.totalCommands || 0}</p>
             </Card>
-          </motion.div>
-        ))}
-        {activeDevices.length === 0 && (
-          <motion.div variants={item} className="col-span-full">
-            <Card className="flex flex-col items-center justify-center py-12 text-slate-400 border border-dashed border-white/10">
-              <Smartphone className="w-12 h-12 mb-4 opacity-50" />
-              <p>Waiting for Android device connection...</p>
+            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors border-white/5 hover:border-white/10 shadow-none relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent-indigo/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+              <div className="flex justify-between items-start mb-6">
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Success Rate</p>
+                <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20">Optimal</span>
+              </div>
+              <p className="text-5xl font-light text-white tracking-tighter">{analytics.successRate || 0}<span className="text-2xl text-white/30 ml-1">%</span></p>
+            </Card>
+            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors border-white/5 hover:border-white/10 shadow-none relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+              <div className="flex justify-between items-start mb-6">
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Failed Executions</p>
+                <span className="text-[10px] font-bold text-white/40 bg-white/5 px-1.5 py-0.5 rounded border border-white/10">0 issues</span>
+              </div>
+              <p className="text-5xl font-light text-white tracking-tighter">{analytics.failedCommands || 0}</p>
+            </Card>
+            <Card className="p-6 flex flex-col justify-between group hover:bg-white/[0.02] transition-colors border-white/5 hover:border-white/10 shadow-none relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent-cyan/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+              <div className="flex justify-between items-start mb-6">
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Avg Latency</p>
+                <span className="text-[10px] font-bold text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded border border-yellow-500/20">Stable</span>
+              </div>
+              <p className="text-5xl font-light text-white tracking-tighter">{analytics.avgSpeedMs || 0}<span className="text-2xl text-white/30 ml-2">ms</span></p>
             </Card>
           </motion.div>
         )}
-      </div>
 
-      {/* Cloud Usage Analytics Row */}
-      {analytics && (
-        <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="p-5 flex flex-col justify-between">
-            <p className="text-sm text-slate-400">Total API Commands</p>
-            <p className="text-3xl font-extrabold text-white mt-2">{analytics.totalCommands || 0}</p>
-          </Card>
-          <Card className="p-5 flex flex-col justify-between">
-            <p className="text-sm text-slate-400">Success Execution Rate</p>
-            <p className="text-3xl font-extrabold text-green-400 mt-2">{analytics.successRate || 0}%</p>
-          </Card>
-          <Card className="p-5 flex flex-col justify-between">
-            <p className="text-sm text-slate-400">Failed Executions</p>
-            <p className="text-3xl font-extrabold text-red-400 mt-2">{analytics.failedCommands || 0}</p>
-          </Card>
-          <Card className="p-5 flex flex-col justify-between">
-            <p className="text-sm text-slate-400">Avg Response Delay</p>
-            <p className="text-3xl font-extrabold text-blue-400 mt-2">{analytics.avgSpeedMs || 0} ms</p>
+        {/* ROW 2: Remote Control & Device Status */}
+        <motion.div variants={item} className="col-span-1 md:col-span-8 flex flex-col">
+          <Card className="flex-grow p-6 flex flex-col border-white/5 shadow-none group">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-semibold text-white/80 flex items-center tracking-wide">
+                <Zap className="w-4 h-4 mr-2 text-primary" /> Remote Control Matrix
+              </h2>
+              <div className="w-2 h-2 rounded-full bg-primary/50 group-hover:bg-primary transition-colors"></div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-grow">
+              <CommandButton intent="VOLUME_MUTE" icon={VolumeX} label="Silent Mode" destructive={true} />
+              <CommandButton intent="VOLUME_UNMUTE" icon={Volume2} label="General Mode" />
+              <CommandButton intent="FLASHLIGHT_ON" icon={Flashlight} label="Torch ON" />
+              <CommandButton intent="FLASHLIGHT_OFF" icon={Flashlight} label="Torch OFF" />
+              <CommandButton intent="OPEN_YOUTUBE" icon={MonitorPlay} label="Open YouTube" />
+              <CommandButton intent="OPEN_CAMERA" icon={Zap} label="Open Camera" />
+              <CommandButton intent="TOGGLE_WIFI" icon={Wifi} label="Toggle Wi-Fi" />
+              <CommandButton intent="TOGGLE_BLUETOOTH" icon={Bluetooth} label="Toggle Bluetooth" />
+            </div>
           </Card>
         </motion.div>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        <motion.div variants={item}>
-          <Card className="h-full">
-            <h3 className="text-lg font-semibold mb-4">Command History Log</h3>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+        <motion.div variants={item} className="col-span-1 md:col-span-4 flex flex-col">
+          <Card className="flex-grow p-6 border-white/5 shadow-none flex flex-col relative overflow-hidden">
+            <h2 className="text-sm font-semibold text-white/80 flex items-center tracking-wide mb-6">
+              <Smartphone className="w-4 h-4 mr-2 text-white/40" /> Active Device Link
+            </h2>
+            
+            {isLoading ? (
+              <div className="flex-grow flex flex-col justify-center animate-pulse">
+                <div className="h-4 bg-white/5 rounded w-1/2 mb-4"></div>
+                <div className="h-10 bg-white/5 rounded w-full mb-2"></div>
+                <div className="h-10 bg-white/5 rounded w-full"></div>
+              </div>
+            ) : activeDevices.length > 0 ? (
+              <div className="flex-grow flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </div>
+                    <h3 className="text-2xl font-light text-white/90 tracking-tight">{activeDevices[0].deviceName}</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Battery</p>
+                      <p className="text-lg font-medium text-white/80">{activeDevices[0].batteryPercentage}%</p>
+                    </div>
+                    <div className="bg-white/[0.02] border border-white/5 rounded-lg p-3">
+                      <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1">Latency</p>
+                      <p className="text-lg font-medium text-white/80">{activeDevices[0].latency || 0}ms</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 pt-4 border-t border-white/5 flex justify-between items-center text-xs text-white/40 font-mono">
+                  <span>ID: {activeDevices[0].socketId.substring(0, 8)}</span>
+                  <span>v{activeDevices[0].androidVersion}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-grow flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4 border border-white/5">
+                  <Smartphone className="w-5 h-5 text-white/20" />
+                </div>
+                <p className="text-sm font-medium text-white/70 mb-2">No Uplink Established</p>
+                <p className="text-[11px] text-white/40 max-w-[200px] leading-relaxed">
+                  Generate a pairing code and connect your Android agent to begin telemetry.
+                </p>
+              </div>
+            )}
+          </Card>
+        </motion.div>
+
+        {/* ROW 3: History & Reminders */}
+        <motion.div variants={item} className="col-span-1 md:col-span-6 flex flex-col">
+          <Card className="flex-grow p-0 border-white/5 shadow-none overflow-hidden h-[340px] flex flex-col">
+            <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+              <h2 className="text-sm font-semibold text-white/80 flex items-center tracking-wide">
+                <HardDrive className="w-4 h-4 mr-2 text-white/40" /> Execution Log
+              </h2>
+            </div>
+            <div className="overflow-y-auto flex-grow p-2 space-y-1">
               {dbHistory.map((cmd) => (
-                <div key={cmd._id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                <div key={cmd._id} className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors group">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg bg-surface flex items-center justify-center">
-                      <Play className="w-5 h-5 text-primary" />
+                    <div className="w-8 h-8 rounded-md bg-white/5 border border-white/5 flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/20 transition-colors">
+                      <Play className="w-3 h-3 text-white/40 group-hover:text-primary" />
                     </div>
                     <div>
-                      <p className="font-medium text-slate-200">{cmd.command}</p>
-                      <p className="text-sm text-slate-400">{cmd.intent ? cmd.intent.replace(/_/g, ' ').toLowerCase() : 'unknown command'}</p>
+                      <p className="text-sm font-medium text-white/80">{cmd.command}</p>
+                      <p className="text-[10px] text-white/40 font-mono mt-0.5">{cmd.intent || 'unknown'}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-medium ${cmd.status === 'Success' ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className={`text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-md ${cmd.status === 'Success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                       {cmd.status}
-                    </p>
-                    <p className="text-xs text-slate-500">{new Date(cmd.createdAt).toLocaleTimeString()}</p>
+                    </div>
+                    <p className="text-[10px] text-white/30 font-mono mt-1">{new Date(cmd.createdAt).toLocaleTimeString()}</p>
                   </div>
                 </div>
               ))}
               {dbHistory.length === 0 && (
-                <p className="text-center text-slate-500 py-6 text-sm">No command execution logs found.</p>
+                <div className="flex flex-col items-center justify-center h-full text-center p-6 relative">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <History className="w-48 h-48 text-white/5 blur-xl" />
+                  </div>
+                  <p className="text-sm text-white/50 font-medium relative z-10 mb-1">No execution logs found</p>
+                  <p className="text-[10px] text-white/30 relative z-10 uppercase tracking-widest">Awaiting Commands</p>
+                </div>
               )}
             </div>
           </Card>
         </motion.div>
 
-        <motion.div variants={item}>
-          <Card className="h-full bg-gradient-to-br from-surface to-surface/50 border-pink-500/20">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold flex items-center text-white">
-                <Cake className="w-5 h-5 mr-2 text-pink-400" />
-                Birthdays & Active Reminders
-              </h3>
-              <Link to="/dashboard/reminders" className="text-xs text-pink-400 hover:text-pink-300 font-medium">
-                Manage All →
+        <motion.div variants={item} className="col-span-1 md:col-span-6 flex flex-col">
+          <Card className="flex-grow p-0 border-white/5 shadow-none overflow-hidden h-[340px] flex flex-col">
+            <div className="p-5 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+              <h2 className="text-sm font-semibold text-white/80 flex items-center tracking-wide">
+                <Bell className="w-4 h-4 mr-2 text-white/40" /> Active Reminders
+              </h2>
+              <Link to="/dashboard/reminders" className="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary/80 transition-colors">
+                Manage All
               </Link>
             </div>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+            <div className="overflow-y-auto flex-grow p-2 space-y-1">
               {remindersList.map((rem) => {
                 const isBirthday = rem.title.toLowerCase().includes('birthday') || rem.repeat === 'YEARLY';
                 return (
-                  <div key={rem._id} className="p-3.5 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between hover:bg-white/10 transition-colors">
+                  <div key={rem._id} className="p-3 rounded-lg hover:bg-white/5 transition-colors flex items-center justify-between group">
                     <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-lg ${isBirthday ? 'bg-pink-500/20 text-pink-400' : 'bg-primary/20 text-primary'}`}>
-                        {isBirthday ? <Cake className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                      <div className={`w-8 h-8 rounded-md flex items-center justify-center border ${isBirthday ? 'bg-pink-500/10 border-pink-500/20 text-pink-400' : 'bg-white/5 border-white/10 text-white/40 group-hover:text-white/80'}`}>
+                        {isBirthday ? <Cake className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
                       </div>
                       <div>
-                        <p className="font-semibold text-sm text-slate-100">{rem.title}</p>
-                        <p className="text-xs text-slate-400 flex items-center mt-0.5">
-                          <Calendar className="w-3 h-3 mr-1 text-slate-500" /> {rem.date} @ {rem.time}
+                        <p className="text-sm font-medium text-white/80">{rem.title}</p>
+                        <p className="text-[10px] text-white/40 font-mono mt-0.5">
+                          {rem.date} @ {rem.time}
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono px-2 py-0.5 bg-white/5 text-slate-300 rounded uppercase">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 border border-white/10 text-white/30 rounded uppercase tracking-widest bg-white/5">
                       {rem.repeat || 'ONCE'}
                     </span>
                   </div>
                 );
               })}
               {remindersList.length === 0 && (
-                <div className="text-center py-8 text-slate-400 text-sm space-y-2">
-                  <p>No active reminders stored.</p>
-                  <p className="text-xs text-slate-500">Ask AI in chat e.g. <i>"Set birthday reminder for [Name]"</i></p>
+                <div className="flex flex-col items-center justify-center h-full text-center p-6 relative">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <Bell className="w-48 h-48 text-white/5 blur-xl" />
+                  </div>
+                  <p className="text-sm text-white/50 font-medium relative z-10 mb-1">No active reminders</p>
+                  <p className="text-[10px] text-white/30 relative z-10 uppercase tracking-widest">Use voice to set one</p>
                 </div>
               )}
             </div>
           </Card>
         </motion.div>
+
       </div>
     </motion.div>
   );
