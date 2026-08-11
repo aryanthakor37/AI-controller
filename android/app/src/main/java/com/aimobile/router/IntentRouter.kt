@@ -24,7 +24,10 @@ class IntentRouter(private val context: Context) {
     suspend fun route(request: CommandRequest): CommandResult {
         return try {
             // Wake up screen & dismiss keyguard if phone is locked/asleep
-            com.aimobile.utils.UnlockHelper.turnScreenOnAndUnlock(context)
+            if (request.intent != "START_SCREEN_STREAM") {
+                com.aimobile.utils.UnlockHelper.turnScreenOnAndUnlock(context)
+                kotlinx.coroutines.delay(1000) // Wait for screen to turn on fully before executing
+            }
 
             when (request.intent) {
                 "DYNAMIC_MACRO" -> {
