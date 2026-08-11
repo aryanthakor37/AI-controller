@@ -8,19 +8,25 @@
 @layer base {
   body {
     @apply text-slate-200 antialiased;
-    background-color: #0D0014;
-    background-image: radial-gradient(circle at top, rgba(255, 0, 127, 0.08), transparent 60%);
+    background-color: #05000A; /* Even deeper space-like dark */
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(255, 0, 127, 0.05), transparent 40%),
+      radial-gradient(circle at 85% 30%, rgba(179, 0, 255, 0.05), transparent 40%);
   }
 }
 
 @layer utilities {
   .glass {
-    @apply bg-surface border border-white/5 rounded-xl;
+    @apply bg-surface/60 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.36)];
   }
 
   .glass-card {
-    @apply bg-surface border border-white/5 rounded-xl relative overflow-hidden shadow-lg;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    @apply bg-surface/40 backdrop-blur-2xl border border-white/10 rounded-xl relative overflow-hidden shadow-[0_8px_32px_0_rgba(0,0,0,0.36)];
+    transition: all 0.3s ease-in-out;
+  }
+  
+  .glass-card:hover {
+    @apply border-white/20 shadow-[0_8px_32px_0_rgba(255,0,127,0.1)];
   }
 
   /* Brand gradient top border */
@@ -30,12 +36,13 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #B300FF, #FF007F);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    opacity: 0.5;
   }
 
   .btn-space {
-    @apply bg-white/5 border border-white/5 hover:bg-white/10 transition-colors duration-200 cursor-pointer rounded-xl;
+    @apply bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] transition-all duration-300 cursor-pointer rounded-xl backdrop-blur-md;
   }
 
   .btn-space-primary {

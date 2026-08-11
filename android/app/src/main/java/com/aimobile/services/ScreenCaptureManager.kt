@@ -42,6 +42,8 @@ class ScreenCaptureManager @Inject constructor(
     var onFrameAvailable: ((String) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
 
+    private var lastFrameTime = 0L
+
     fun initProjection(resultCode: Int, data: Intent, serviceContext: Context) {
         val projectionManager = serviceContext.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         mediaProjection = projectionManager.getMediaProjection(resultCode, data)
@@ -57,6 +59,7 @@ class ScreenCaptureManager @Inject constructor(
         if (isStreaming) return
         isStreaming = true
         firstFrameReceived = false
+        lastFrameTime = 0L
 
         try {
             val metrics = serviceContext.resources.displayMetrics
@@ -77,6 +80,16 @@ class ScreenCaptureManager @Inject constructor(
         
         imageReader?.setOnImageAvailableListener({ reader ->
             if (!isStreaming) return@setOnImageAvailableListener
+            
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastFrameTime < 100) {
+                // Throttle to roughly 10 FPS
+                val image = reader.acquireLatestImage()
+                image?.close()
+                return@setOnImageAvailableListener
+            }
+            lastFrameTime = currentTime
+            
             if (!firstFrameReceived) {
                 firstFrameReceived = true
                 onError?.invoke("DEBUG: First frame received from ImageReader!")
