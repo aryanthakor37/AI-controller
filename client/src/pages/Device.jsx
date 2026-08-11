@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Smartphone, Battery, Wifi, Cpu, HardDrive, 
   ShieldCheck, Zap, RefreshCw, Search, Key, 
-  CheckCircle2, AlertTriangle, Radio, MonitorPlay, X
+  CheckCircle2, AlertTriangle, Radio, MonitorPlay, X,
+  Home, ArrowLeft, Square, Lock, Volume2, Volume1
 } from 'lucide-react';
 import { Card } from '../components/atoms/Card';
 import { Button } from '../components/atoms/Button';
@@ -117,6 +118,35 @@ const Device = () => {
     setActionSuccess(`Sent "${intent.replace(/_/g, ' ')}" to ${deviceName}`);
     setTimeout(() => setActionSuccess(null), 3000);
   };
+
+  // Ghost Typing: Global Keyboard Listener for Live Stream
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (!liveScreenActiveDevice || !socketService.socket) return;
+      
+      // Ignore if typing in an input field on the dashboard itself
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      // Prevent default for some keys to avoid scrolling dashboard
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        e.preventDefault();
+      }
+
+      let charToInject = e.key;
+      // Handle special keys
+      if (e.key === 'Enter') charToInject = 'Enter';
+      else if (e.key === 'Backspace') charToInject = 'Backspace';
+      else if (e.key.length > 1) return; // Ignore Shift, Ctrl, etc.
+      
+      socketService.socket.emit('dashboard:inject_text', {
+        socketId: liveScreenActiveDevice,
+        text: charToInject
+      });
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [liveScreenActiveDevice]);
 
   const filteredDevices = activeDevices.filter(device => 
     (device.deviceName || 'Android Device').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -431,15 +461,41 @@ const Device = () => {
               </div>
               <div className="bg-black flex justify-center items-center min-h-[60vh] relative">
                 {liveScreenFrame ? (
-                  <img 
-                    src={`data:image/jpeg;base64,${liveScreenFrame}`} 
-                    alt="Live Screen" 
-                    className="w-full h-full object-contain cursor-crosshair touch-none" 
-                    onPointerDown={handlePointerDown}
-                    onPointerUp={handlePointerUp}
-                    onPointerLeave={() => { gestureStartRef.current = null; }}
-                    draggable="false"
-                  />
+                  <>
+                    <img 
+                      src={`data:image/jpeg;base64,${liveScreenFrame}`} 
+                      alt="Live Screen" 
+                      className="w-full h-full object-contain cursor-crosshair touch-none" 
+                      onPointerDown={handlePointerDown}
+                      onPointerUp={handlePointerUp}
+                      onPointerLeave={() => { gestureStartRef.current = null; }}
+                      draggable="false"
+                    />
+                    
+                    {/* Hardware Buttons Panel (Phantom Touch) */}
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 p-2 bg-slate-900/70 backdrop-blur-md rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+                      <button onClick={() => triggerDeviceCommand(liveScreenActiveDevice, 'GO_HOME', 'Device')} className="p-2.5 text-slate-300 hover:text-white hover:bg-white/20 rounded-xl transition-colors" title="Home">
+                        <Home className="w-5 h-5" />
+                      </button>
+                      <button onClick={() => triggerDeviceCommand(liveScreenActiveDevice, 'GO_RECENTS', 'Device')} className="p-2.5 text-slate-300 hover:text-white hover:bg-white/20 rounded-xl transition-colors" title="Recent Apps">
+                        <Square className="w-5 h-5" />
+                      </button>
+                      <button onClick={() => triggerDeviceCommand(liveScreenActiveDevice, 'GO_BACK', 'Device')} className="p-2.5 text-slate-300 hover:text-white hover:bg-white/20 rounded-xl transition-colors" title="Back">
+                        <ArrowLeft className="w-5 h-5" />
+                      </button>
+                      <div className="w-full h-px bg-white/10 my-1"></div>
+                      <button onClick={() => triggerDeviceCommand(liveScreenActiveDevice, 'INCREASE_VOLUME', 'Device')} className="p-2.5 text-slate-300 hover:text-white hover:bg-white/20 rounded-xl transition-colors" title="Volume Up">
+                        <Volume2 className="w-5 h-5" />
+                      </button>
+                      <button onClick={() => triggerDeviceCommand(liveScreenActiveDevice, 'DECREASE_VOLUME', 'Device')} className="p-2.5 text-slate-300 hover:text-white hover:bg-white/20 rounded-xl transition-colors" title="Volume Down">
+                        <Volume1 className="w-5 h-5" />
+                      </button>
+                      <div className="w-full h-px bg-white/10 my-1"></div>
+                      <button onClick={() => triggerDeviceCommand(liveScreenActiveDevice, 'LOCK_SCREEN', 'Device')} className="p-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-xl transition-colors" title="Lock Screen">
+                        <Lock className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center p-8">
                     {!liveScreenError && <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>}

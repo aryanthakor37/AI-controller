@@ -22,6 +22,7 @@ SUPPORTED INTENTS (You MUST use one of these exact strings):
 - DECREASE_VOLUME
 - VOLUME_MUTE
 - VOLUME_UNMUTE
+- SET_BRIGHTNESS (requires: message - percentage value like "10%" or "max")
 - BATTERY_STATUS
 - NETWORK_STATUS (use when user asks about wifi status, internet connection, or network)
 - DEVICE_INFO
@@ -31,7 +32,7 @@ SUPPORTED INTENTS (You MUST use one of these exact strings):
 - SUMMARIZE_SCREEN (use when user wants to read or summarize what is currently visible on their screen)
 - EXECUTE_ROUTINE (requires: routine - trigger phrase or name of routine to execute like "good night", "study mode", "work mode")
 - EMERGENCY_SOS (requires: action - "TRIGGER" or "CANCEL")
-- TOGGLE_QUICK_SETTING (requires: app - name of the setting like "wifi", "bluetooth", "dark mode", "airplane mode")
+- TOGGLE_QUICK_SETTING (use this for ANY command asking to "turn on", "turn off", "enable", or "disable" a phone setting/feature, EXCEPT flashlight. requires: app - exact setting name like "Wi-Fi", "Mobile data", "Bluetooth", "Airplane mode", "Hotspot", "Location", "Do Not Disturb", "Auto-rotate", "Silent mode", "Dark mode", "Battery Saver", "Eye Protection", "Screen Cast")
 - TAKE_SELFIE (use for taking a selfie or front camera photo)
 - TRANSLATE_TEXT (requires: message - text to translate)
 - GENERAL_CHAT (requires: reply - conversational response, news summary, facts, or helpful information)
@@ -96,11 +97,32 @@ User: "Search virat kohli on Instagram"
 User: "Turn on Flashlight"
 {"intent": "FLASHLIGHT_ON", "confidence": 0.99}
 
+User: "Turn off Flashlight"
+{"intent": "FLASHLIGHT_OFF", "confidence": 0.99}
+
+User: "Turn on Wi-Fi"
+{"intent": "TOGGLE_QUICK_SETTING", "app": "Wi-Fi", "confidence": 0.99}
+
+User: "Turn off Mobile data"
+{"intent": "TOGGLE_QUICK_SETTING", "app": "Mobile data", "confidence": 0.99}
+
+User: "Turn on Airplane mode"
+{"intent": "TOGGLE_QUICK_SETTING", "app": "Airplane mode", "confidence": 0.99}
+
+User: "Turn off auto rotate"
+{"intent": "TOGGLE_QUICK_SETTING", "app": "Auto-rotate", "confidence": 0.99}
+
+User: "Turn on Hotspot"
+{"intent": "TOGGLE_QUICK_SETTING", "app": "Hotspot", "confidence": 0.99}
+
 User: "Call Mom"
 {"intent": "CALL_CONTACT", "contact": "Mom", "confidence": 0.98}
 
 User: "Set alarm at 6 AM"
 {"intent": "SET_ALARM", "time": "06:00", "confidence": 0.98}
+
+User: "set Brightness 10"
+{"intent": "SET_BRIGHTNESS", "message": "10", "confidence": 0.99}
 
 User: "Wake me up at 5 PM"
 {"intent": "SET_ALARM", "time": "17:00", "confidence": 0.96}

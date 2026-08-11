@@ -291,7 +291,8 @@ class VoiceRepository @Inject constructor(
             duration = null,
             query = smsMsg,
             message = smsMsg,
-            app = appName
+            app = appName,
+            contact = contactName
         )
         
         val reply = when (intent) {
@@ -324,13 +325,14 @@ class VoiceRepository @Inject constructor(
 
         return CommandRequest(
             intent = intent,
-            number = chatData.number ?: chatData.contact,
+            number = chatData.number,
             time = chatData.time,
             duration = durationSeconds,
             query = chatData.query,
             message = chatData.message,
             app = chatData.app,
-            steps = chatData.steps
+            steps = chatData.steps,
+            contact = chatData.contact
         )
     }
 }

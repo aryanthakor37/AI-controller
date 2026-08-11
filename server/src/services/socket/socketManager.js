@@ -112,6 +112,13 @@ const initSocket = (httpServer) => {
       }
     });
 
+    socket.on('dashboard:inject_text', ({ socketId, text }) => {
+      if (socketId) {
+        // Minimal logging to avoid clutter for every keystroke
+        ioInstance.to(socketId).emit('device:inject_text', { text });
+      }
+    });
+
     // Handle dashboard requesting device list on connect
     socket.on('dashboard:request_devices', () => {
       logToFile(`[SocketManager] dashboard:request_devices from ${socket.id}`);

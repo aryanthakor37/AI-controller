@@ -46,8 +46,12 @@ object AutomationManager {
             val rootNode = service.rootInActiveWindow ?: continue
             val nodes = rootNode.findAccessibilityNodeInfosByText(text)
             if (!nodes.isNullOrEmpty()) {
-                // Exact text match check
-                val exactNode = nodes.firstOrNull { it.text?.toString()?.equals(text, ignoreCase = true) == true }
+                // Exact text match check or exact match with 'Off'/'On' state
+                val exactNode = nodes.firstOrNull { 
+                    val t = it.text?.toString()?.trim()?.lowercase() ?: ""
+                    val target = text.lowercase()
+                    t == target || t == "$target off" || t == "$target\noff" || t == "$target on" || t == "$target\non"
+                }
                 val clicked = performClick(exactNode ?: nodes[0])
                 if (clicked) {
                     addLog("Successfully clicked text: $text")
@@ -66,7 +70,11 @@ object AutomationManager {
             val rootNode = service.rootInActiveWindow ?: continue
             val nodes = rootNode.findAccessibilityNodeInfosByText(desc)
             if (!nodes.isNullOrEmpty()) {
-                val match = nodes.firstOrNull { it.contentDescription?.toString()?.equals(desc, ignoreCase = true) == true }
+                val match = nodes.firstOrNull { 
+                    val d = it.contentDescription?.toString()?.trim()?.lowercase() ?: ""
+                    val target = desc.lowercase()
+                    d == target || d == "$target off" || d == "$target\noff" || d == "$target on" || d == "$target\non"
+                }
                 val clicked = performClick(match ?: nodes[0])
                 if (clicked) {
                     addLog("Successfully clicked content description: $desc")

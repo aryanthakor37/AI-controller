@@ -458,6 +458,31 @@ class IntentRouter(private val context: Context) {
                     CommandResult("Success", "Stopped screen stream")
                 }
                 
+                "GO_HOME" -> {
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    val success = service?.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME) ?: false
+                    CommandResult(if (success) "Success" else "Failed", "Pressed Home")
+                }
+                "GO_BACK" -> {
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    val success = service?.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK) ?: false
+                    CommandResult(if (success) "Success" else "Failed", "Pressed Back")
+                }
+                "GO_RECENTS" -> {
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    val success = service?.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS) ?: false
+                    CommandResult(if (success) "Success" else "Failed", "Opened Recents")
+                }
+                "LOCK_SCREEN" -> {
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        val success = service?.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN) ?: false
+                        CommandResult(if (success) "Success" else "Failed", "Locked Screen")
+                    } else {
+                        CommandResult("Failed", "Lock screen requires Android 9+")
+                    }
+                }
+                
                 else -> CommandResult(status = "Unsupported", message = "Unknown intent: ${request.intent}")
             }
         } catch (e: Exception) {

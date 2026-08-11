@@ -78,6 +78,30 @@ class MyAccessibilityService : AccessibilityService() {
         }
     }
 
+    fun injectTextToFocusedNode(text: String) {
+        val root = rootInActiveWindow ?: return
+        val focusedNode = root.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT)
+        
+        if (focusedNode != null) {
+            val currentText = focusedNode.text?.toString() ?: ""
+            val newText = if (text == "\b" || text == "Backspace") {
+                if (currentText.isNotEmpty()) currentText.dropLast(1) else ""
+            } else if (text == "\n" || text == "Enter") {
+                currentText + "\n"
+            } else {
+                currentText + text
+            }
+            
+            val arguments = android.os.Bundle()
+            arguments.putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText)
+            focusedNode.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+            focusedNode.recycle()
+            Log.d("AccessibilityService", "Injected text: $newText")
+        } else {
+            Log.d("AccessibilityService", "No input focused node found to inject text")
+        }
+    }
+
     override fun onInterrupt() {
         Log.d("AccessibilityService", "Service Interrupted")
         _isServiceEnabled.value = false

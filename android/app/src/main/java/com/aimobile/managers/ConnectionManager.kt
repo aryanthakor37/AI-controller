@@ -137,6 +137,18 @@ class ConnectionManager @Inject constructor(
                 }
             }
 
+            socket?.on("device:inject_text") { args ->
+                if (args.isNotEmpty()) {
+                    try {
+                        val payload = args[0] as JSONObject
+                        val text = payload.getString("text")
+                        com.aimobile.accessibility.MyAccessibilityService.instance?.injectTextToFocusedNode(text)
+                    } catch (e: Exception) {
+                        Log.e("ConnectionManager", "Error injecting text", e)
+                    }
+                }
+            }
+
             socket?.connect()
         } catch (e: URISyntaxException) {
             Log.e("ConnectionManager", "Socket URL error", e)

@@ -30,31 +30,31 @@ const Register = () => {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <Card>
         <h2 className="text-2xl font-semibold mb-6 text-center">Create an Account</h2>
-        
+
         <form onSubmit={handleRegister} className="space-y-4">
-          <Input 
-            label="Full Name" 
-            type="text" 
-            placeholder="Alex Developer" 
+          <Input
+            label="Full Name"
+            type="text"
+            placeholder="Alex Developer"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            required 
+            required
           />
-          <Input 
-            label="Email" 
-            type="email" 
-            placeholder="alex@example.com" 
+          <Input
+            label="Email"
+            type="email"
+            placeholder="alex@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            required 
+            required
           />
-          <Input 
-            label="Password" 
-            type="password" 
-            placeholder="••••••••" 
+          <Input
+            label="Password"
+            type="password"
+            placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            required 
+            required
           />
           <Button type="submit" className="w-full mt-6" disabled={loading}>
             {loading ? 'Signing Up...' : 'Sign Up'}
