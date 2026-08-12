@@ -64,7 +64,13 @@ const Device = () => {
           navigator.clipboard.writeText(data.text).catch(() => {});
         }
         setClipboardToast({ text: data.text });
-        setTimeout(() => setClipboardToast(null), 4000);
+        setTimeout(() => setClipboardToast(null), 6000);
+      }
+    };
+
+    const handleCommandResult = (data) => {
+      if (data.result && data.result.intent === 'GET_CLIPBOARD' && data.result.data) {
+        handleClipboardChanged({ text: data.result.data });
       }
     };
 
@@ -72,12 +78,14 @@ const Device = () => {
     socketService.on('dashboard:screen_frame', handleScreenFrame);
     socketService.on('dashboard:screen_frame_error', handleScreenFrameError);
     socketService.on('dashboard:clipboard_changed', handleClipboardChanged);
+    socketService.on('dashboard:command_result', handleCommandResult);
 
     return () => {
       socketService.off('dashboard:screenshot_result', handleScreenshotResult);
       socketService.off('dashboard:screen_frame', handleScreenFrame);
       socketService.off('dashboard:screen_frame_error', handleScreenFrameError);
       socketService.off('dashboard:clipboard_changed', handleClipboardChanged);
+      socketService.off('dashboard:command_result', handleCommandResult);
     };
   }, [dispatch]);
 
