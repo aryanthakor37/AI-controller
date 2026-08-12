@@ -33,6 +33,7 @@ class ScreenCaptureManager @Inject constructor(
     private var imageReader: ImageReader? = null
     private var isStreaming = false
     private var firstFrameReceived = false
+    private var reusableBitmap: Bitmap? = null
     private var handlerThread: android.os.HandlerThread? = null
     private var handler: android.os.Handler? = null
 
@@ -83,9 +84,9 @@ class ScreenCaptureManager @Inject constructor(
             try {
                 val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
                 
-                // Throttle framerate to ~15 FPS (66ms) to prevent lag/latency buildup
+                // Throttle framerate to ~28 FPS (35ms) for instant real-time reflection
                 val currentTime = System.currentTimeMillis()
-                if (currentTime - lastFrameTime < 66L) {
+                if (currentTime - lastFrameTime < 35L) {
                     image.close()
                     return@setOnImageAvailableListener
                 }
@@ -103,24 +104,30 @@ class ScreenCaptureManager @Inject constructor(
                     val rowStride = planes[0].rowStride
                     val rowPadding = rowStride - pixelStride * width
                     
-                    val bitmap = Bitmap.createBitmap(
-                        width + rowPadding / pixelStride,
-                        height,
-                        Bitmap.Config.ARGB_8888
-                    )
+                    val bitmapWidth = width + rowPadding / pixelStride
+                    if (reusableBitmap == null || reusableBitmap?.width != bitmapWidth || reusableBitmap?.height != height) {
+                        reusableBitmap?.recycle()
+                        reusableBitmap = Bitmap.createBitmap(bitmapWidth, height, Bitmap.Config.ARGB_8888)
+                    }
+                    
+                    val targetBmp = reusableBitmap ?: return@setOnImageAvailableListener
                     buffer.position(0)
-                    bitmap.copyPixelsFromBuffer(buffer)
-                    val croppedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height)
+                    targetBmp.copyPixelsFromBuffer(buffer)
+                    
+                    val finalBitmap = if (rowPadding != 0) {
+                        Bitmap.createBitmap(targetBmp, 0, 0, width, height)
+                    } else {
+                        targetBmp
+                    }
                     
                     val baos = ByteArrayOutputStream()
-                    croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 20, baos)
+                    finalBitmap.compress(Bitmap.CompressFormat.JPEG, 18, baos)
                     val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
                     
                     onFrameAvailable?.invoke(base64)
                     
-                    bitmap.recycle()
-                    if (bitmap != croppedBitmap) {
-                        croppedBitmap.recycle()
+                    if (finalBitmap != targetBmp) {
+                        finalBitmap.recycle()
                     }
                 } finally {
                     image.close()
