@@ -174,35 +174,19 @@ class ConnectionManager @Inject constructor(
                 }
             }
 
-            // Register Phone -> PC Clipboard Listener
-            Handler(Looper.getMainLooper()).post {
-                try {
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.addPrimaryClipChangedListener {
-                        try {
-                            val clipData = clipboard.primaryClip
-                            if (clipData != null && clipData.itemCount > 0) {
-                                val text = clipData.getItemAt(0).text?.toString() ?: ""
-                                if (text.isNotEmpty() && text != lastSyncedClipboardText) {
-                                    lastSyncedClipboardText = text
-                                    val payload = JSONObject()
-                                    payload.put("text", text)
-                                    socket?.emit("device:clipboard_changed", payload)
-                                    Log.d("ConnectionManager", "Emitted phone clipboard to PC: $text")
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.e("ConnectionManager", "Error reading phone clipboard change", e)
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("ConnectionManager", "Failed to register clipboard listener", e)
-                }
-            }
-
             socket?.connect()
         } catch (e: URISyntaxException) {
             Log.e("ConnectionManager", "Socket URL error", e)
+        }
+    }
+
+    fun onPhoneClipboardChanged(text: String) {
+        if (text.isNotEmpty() && text != lastSyncedClipboardText) {
+            lastSyncedClipboardText = text
+            val payload = JSONObject()
+            payload.put("text", text)
+            socket?.emit("device:clipboard_changed", payload)
+            Log.d("ConnectionManager", "Emitted phone clipboard to PC: $text")
         }
     }
 

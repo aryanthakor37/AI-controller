@@ -14,6 +14,25 @@ class MyAccessibilityService : AccessibilityService() {
         Log.d("AccessibilityService", "Service Connected")
         instance = this
         _isServiceEnabled.value = true
+
+        try {
+            val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            clipboard?.addPrimaryClipChangedListener {
+                try {
+                    val clipData = clipboard.primaryClip
+                    if (clipData != null && clipData.itemCount > 0) {
+                        val text = clipData.getItemAt(0).text?.toString() ?: ""
+                        if (text.isNotEmpty()) {
+                            com.aimobile.managers.ConnectionManager.instance?.onPhoneClipboardChanged(text)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("AccessibilityService", "Error reading clipboard", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("AccessibilityService", "Failed to add clipboard listener", e)
+        }
     }
 
     var macroRecorderManager: com.aimobile.accessibility.macro.MacroRecorderManager? = null
