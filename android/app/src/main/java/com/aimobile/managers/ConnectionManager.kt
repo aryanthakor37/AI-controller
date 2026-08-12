@@ -194,15 +194,6 @@ class ConnectionManager @Inject constructor(
         screenCaptureManager.stopStream()
     }
 
-    fun onPhoneClipboardChanged(text: String) {
-        if (text.isNotEmpty()) {
-            val payload = JSONObject()
-            payload.put("text", text)
-            socket?.emit("device:clipboard_changed", payload)
-            Log.d("ConnectionManager", "Emitted phone clipboard to PC: $text")
-        }
-    }
-
     fun disconnect() {
         socket?.disconnect()
         _connectionState.value = false
