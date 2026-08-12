@@ -96,6 +96,24 @@ class MyAccessibilityService : AccessibilityService() {
         }
     }
 
+    fun getPhoneClipboardText(): String {
+        if (lastCopiedText.isNotEmpty()) return lastCopiedText
+        try {
+            val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            val clipData = clipboard?.primaryClip
+            if (clipData != null && clipData.itemCount > 0) {
+                val itemText = clipData.getItemAt(0).text?.toString() ?: ""
+                if (itemText.isNotEmpty()) {
+                    lastCopiedText = itemText
+                    return itemText
+                }
+            }
+        } catch (e: Throwable) {
+            Log.e("AccessibilityService", "Clipboard read error", e)
+        }
+        return ""
+    }
+
     fun performGesture(startXPercent: Float, startYPercent: Float, endXPercent: Float, endYPercent: Float, durationMs: Long) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             try {

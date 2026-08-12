@@ -64,7 +64,9 @@ const Device = () => {
           navigator.clipboard.writeText(data.text).catch(() => {});
         }
         setClipboardToast({ text: data.text });
-        setTimeout(() => setClipboardToast(null), 6000);
+        setActionSuccess(`Copied from Phone Clipboard: "${data.text.substring(0, 25)}..."`);
+        setTimeout(() => setClipboardToast(null), 8000);
+        setTimeout(() => setActionSuccess(null), 4000);
       }
     };
 

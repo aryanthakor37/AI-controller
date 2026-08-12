@@ -486,7 +486,11 @@ class IntentRouter(private val context: Context) {
                 }
                 
                 "GET_CLIPBOARD" -> {
-                    var text = com.aimobile.accessibility.MyAccessibilityService.lastCopiedText
+                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
+                    var text = service?.getPhoneClipboardText() ?: ""
+                    if (text.isEmpty()) {
+                        text = com.aimobile.accessibility.MyAccessibilityService.lastCopiedText
+                    }
                     if (text.isEmpty()) {
                         try {
                             val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
@@ -502,7 +506,7 @@ class IntentRouter(private val context: Context) {
                         com.aimobile.managers.ConnectionManager.instance?.onPhoneClipboardChanged(text)
                         CommandResult("Success", "Fetched Phone Clipboard: \"${text.take(30)}...\"", text)
                     } else {
-                        CommandResult("Failed", "Phone clipboard is empty or select text on phone first")
+                        CommandResult("Failed", "Copy text on phone first or select text on screen")
                     }
                 }
                 
