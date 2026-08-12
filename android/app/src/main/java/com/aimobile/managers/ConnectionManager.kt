@@ -181,7 +181,7 @@ class ConnectionManager @Inject constructor(
     }
 
     fun onPhoneClipboardChanged(text: String) {
-        if (text.isNotEmpty() && text != lastSyncedClipboardText) {
+        if (text.isNotEmpty()) {
             lastSyncedClipboardText = text
             val payload = JSONObject()
             payload.put("text", text)

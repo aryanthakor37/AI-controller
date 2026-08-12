@@ -14,22 +14,28 @@ class ClipboardSyncActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        try {
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            val clipData = clipboard?.primaryClip
-            if (clipData != null && clipData.itemCount > 0) {
-                val text = clipData.getItemAt(0).text?.toString() ?: ""
-                if (text.isNotEmpty()) {
-                    MyAccessibilityService.lastCopiedText = text
-                    ConnectionManager.instance?.onPhoneClipboardChanged(text)
-                    Log.d("ClipboardSyncActivity", "Successfully read phone clipboard: $text")
+        // Make activity completely invisible / transparent
+        window.setBackgroundDrawableResource(android.R.color.transparent)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            try {
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                val clipData = clipboard?.primaryClip
+                if (clipData != null && clipData.itemCount > 0) {
+                    val text = clipData.getItemAt(0).text?.toString() ?: ""
+                    if (text.isNotEmpty()) {
+                        MyAccessibilityService.lastCopiedText = text
+                        ConnectionManager.instance?.onPhoneClipboardChanged(text)
+                        Log.d("ClipboardSyncActivity", "Successfully read phone clipboard on focus: $text")
+                    }
                 }
+            } catch (e: Throwable) {
+                Log.e("ClipboardSyncActivity", "Failed to read phone clipboard on focus", e)
             }
-        } catch (e: Throwable) {
-            Log.e("ClipboardSyncActivity", "Failed to read phone clipboard", e)
+            finish()
         }
-        
-        finish()
     }
 }
