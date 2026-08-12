@@ -7,7 +7,8 @@ import { useSelector } from 'react-redux';
 const Sidebar = () => (
   <aside className="w-64 h-screen glass border-r border-white/10 flex flex-col pt-8 z-20">
     <div className="px-6 mb-10">
-      <Link to="/">
+      <Link to="/" className="flex items-center space-x-3">
+        <img src="/favicon.png" alt="Agent AI Logo" className="w-8 h-8 rounded-xl shadow-lg border border-indigo-500/40 object-cover" />
         <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent-cyan bg-clip-text text-transparent hover:opacity-80 transition-opacity cursor-pointer">
           Agent.AI
         </h1>
