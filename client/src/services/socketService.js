@@ -5,6 +5,8 @@ import { getSocketUrl } from '../config';
 
 class SocketService {
   constructor() {
+    this.socket = null;
+    this.url = getSocketUrl();
     this.listeners = new Map();
   }
 
