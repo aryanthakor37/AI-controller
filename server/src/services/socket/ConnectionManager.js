@@ -30,11 +30,15 @@ class ConnectionManager {
     return device;
   }
 
-  updateHeartbeat(socketId, latency) {
+  updateHeartbeat(socketId, latency, batteryPercentage) {
     const device = this.devices.get(socketId);
     if (device) {
       device.lastSeen = Date.now();
       device.latency = latency;
+      if (typeof batteryPercentage === 'number' && batteryPercentage >= 0) {
+        device.batteryPercentage = batteryPercentage;
+        device.battery = batteryPercentage;
+      }
       this.devices.set(socketId, device);
     }
   }

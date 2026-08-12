@@ -384,12 +384,12 @@ const Device = () => {
               <div>
                 <div className="flex justify-between text-xs text-slate-400 mb-1">
                   <span className="flex items-center"><Battery className="w-3.5 h-3.5 mr-1 text-green-400" /> Battery Level</span>
-                  <span className="font-bold text-white">{device.batteryPercentage || 85}%</span>
+                  <span className="font-bold text-white">{(device.batteryPercentage ?? device.battery ?? 100)}%</span>
                 </div>
                 <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" 
-                    style={{ width: `${device.batteryPercentage || 85}%` }}
+                    style={{ width: `${(device.batteryPercentage ?? device.battery ?? 100)}%` }}
                   />
                 </div>
               </div>
