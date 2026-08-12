@@ -17,8 +17,27 @@ class ScreenCaptureActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        startActivityForResult(projectionManager.createScreenCaptureIntent(), 1001)
+        val layout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER
+            setBackgroundColor(android.graphics.Color.parseColor("#0F172A"))
+        }
+        val textView = android.widget.TextView(this).apply {
+            text = "Starting Remote Screen Control..."
+            setTextColor(android.graphics.Color.WHITE)
+            textSize = 16f
+        }
+        layout.addView(textView)
+        setContentView(layout)
+
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            try {
+                val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                startActivityForResult(projectionManager.createScreenCaptureIntent(), 1001)
+            } catch (e: Exception) {
+                finish()
+            }
+        }, 150)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
