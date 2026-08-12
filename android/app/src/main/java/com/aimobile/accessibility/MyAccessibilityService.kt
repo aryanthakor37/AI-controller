@@ -44,6 +44,34 @@ class MyAccessibilityService : AccessibilityService() {
                 Log.d("AccessibilityService", "Window State Changed: $currentActivePackage")
             }
 
+            // Capture text selection changes when user selects text anywhere on phone
+            if (it.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED) {
+                val textList = it.text
+                if (!textList.isNullOrEmpty()) {
+                    val fullText = textList.joinToString(" ")
+                    val from = it.fromIndex
+                    val to = it.toIndex
+                    if (from >= 0 && to > from && to <= fullText.length) {
+                        val selectedText = fullText.substring(from, to).trim()
+                        if (selectedText.isNotBlank()) {
+                            lastCopiedText = selectedText
+                            com.aimobile.managers.ConnectionManager.instance?.onPhoneClipboardChanged(selectedText)
+                        }
+                    }
+                }
+            }
+
+            // Capture clicks on Copy popup buttons
+            if (it.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+                val node = it.source
+                val btnText = (it.text?.firstOrNull()?.toString() ?: node?.text?.toString() ?: node?.contentDescription?.toString() ?: "").trim().lowercase()
+                if (btnText == "copy" || btnText == "કોપી" || btnText == "कॉपी" || btnText == "copy text") {
+                    if (lastCopiedText.isNotEmpty()) {
+                        com.aimobile.managers.ConnectionManager.instance?.onPhoneClipboardChanged(lastCopiedText)
+                    }
+                }
+            }
+
             // Macro recording event listener
             macroRecorderManager?.let { recorder ->
                 if (recorder.isRecording.value) {
@@ -112,6 +140,8 @@ class MyAccessibilityService : AccessibilityService() {
             set(value) {
                 _currentActivePackageFlow.value = value
             }
+            
+        var lastCopiedText: String = ""
             
         // Buffer to prevent dropped characters during fast typing
         private var localTextBuffer: String = ""

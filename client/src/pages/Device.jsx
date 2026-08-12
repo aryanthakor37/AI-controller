@@ -436,11 +436,19 @@ const Device = () => {
                 </button>
                 <button 
                   onClick={() => handleSyncPcClipboard(device.socketId)}
-                  className="px-3 py-2 text-xs bg-white/5 hover:bg-primary/20 hover:text-primary text-slate-300 rounded-lg transition-colors text-center border border-white/5 flex items-center justify-center space-x-1"
+                  className="px-3 py-2 text-xs bg-white/5 hover:bg-indigo-500/20 hover:text-indigo-400 text-slate-300 rounded-lg transition-colors text-center border border-white/5 flex items-center justify-center space-x-1"
                   title="Send PC clipboard to Phone"
                 >
                   <Clipboard className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Sync Clipboard</span>
+                  <span>Send Clipboard</span>
+                </button>
+                <button 
+                  onClick={() => triggerDeviceCommand(device.socketId, 'GET_CLIPBOARD', device.deviceName)}
+                  className="px-3 py-2 text-xs bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 text-slate-300 rounded-lg transition-colors text-center border border-white/5 flex items-center justify-center space-x-1"
+                  title="Get copied text from Phone to PC"
+                >
+                  <Clipboard className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Get Phone Clipboard</span>
                 </button>
               </div>
             </div>

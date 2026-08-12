@@ -485,6 +485,27 @@ class IntentRouter(private val context: Context) {
                     CommandResult("Success", "Stopped screen stream")
                 }
                 
+                "GET_CLIPBOARD" -> {
+                    var text = com.aimobile.accessibility.MyAccessibilityService.lastCopiedText
+                    if (text.isEmpty()) {
+                        try {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                            val clipData = clipboard?.primaryClip
+                            if (clipData != null && clipData.itemCount > 0) {
+                                text = clipData.getItemAt(0).text?.toString() ?: ""
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("IntentRouter", "Clipboard read error", e)
+                        }
+                    }
+                    if (text.isNotEmpty()) {
+                        com.aimobile.managers.ConnectionManager.instance?.onPhoneClipboardChanged(text)
+                        CommandResult("Success", "Fetched Phone Clipboard: \"${text.take(30)}...\"", text)
+                    } else {
+                        CommandResult("Failed", "Phone clipboard is empty or select text on phone first")
+                    }
+                }
+                
                 "GO_HOME" -> {
                     val service = com.aimobile.accessibility.MyAccessibilityService.instance
                     val success = service?.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME) ?: false
