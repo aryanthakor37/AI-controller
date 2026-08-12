@@ -282,8 +282,20 @@ class IntentRouter(private val context: Context) {
                 
                 "TOGGLE_QUICK_SETTING" -> {
                     val tileName = request.app ?: request.message ?: request.query ?: ""
+                    val cleanTile = tileName.lowercase().trim()
                     val service = com.aimobile.accessibility.MyAccessibilityService.instance
-                    com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, tileName)
+                    
+                    if (cleanTile == "bluetooth" || cleanTile == "bt") {
+                        val adapter = try { android.bluetooth.BluetoothAdapter.getDefaultAdapter() } catch (e: Exception) { null }
+                        val isBtOn = adapter?.isEnabled == true
+                        if (isBtOn) {
+                            com.aimobile.accessibility.automation.AppAutomations.runBluetoothToggleAutomation(service, context, false)
+                        } else {
+                            com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, tileName)
+                        }
+                    } else {
+                        com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, tileName)
+                    }
                 }
 
                 "TOGGLE_WIFI", "WIFI_ON", "WIFI_OFF" -> {
@@ -293,7 +305,14 @@ class IntentRouter(private val context: Context) {
 
                 "TOGGLE_BLUETOOTH", "BLUETOOTH_ON", "BLUETOOTH_OFF" -> {
                     val service = com.aimobile.accessibility.MyAccessibilityService.instance
-                    com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, "bluetooth")
+                    val adapter = try { android.bluetooth.BluetoothAdapter.getDefaultAdapter() } catch (e: Exception) { null }
+                    val isBtOn = adapter?.isEnabled == true
+                    val isExplicitOff = request.intent == "BLUETOOTH_OFF" || (request.message ?: "").lowercase().contains("off")
+                    if (isExplicitOff || isBtOn) {
+                        com.aimobile.accessibility.automation.AppAutomations.runBluetoothToggleAutomation(service, context, false)
+                    } else {
+                        com.aimobile.accessibility.automation.AppAutomations.runQuickSettingToggle(service, context, "bluetooth")
+                    }
                 }
 
                 "SET_ALARM" -> {

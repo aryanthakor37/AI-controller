@@ -275,6 +275,8 @@ object AppAutomations {
             if (service != null) {
                 val toggled = AutomationManager.toggleSwitch(service, turnOn)
                 if (toggled) {
+                    delay(600)
+                    service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
                     CommandResult("Success", "Bluetooth turned ${if (turnOn) "ON" else "OFF"} automatically")
                 } else {
                     CommandResult("Success", "Opened Bluetooth settings (Auto-click switch)")

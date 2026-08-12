@@ -5,7 +5,7 @@ import {
   Smartphone, Battery, Wifi, Cpu, HardDrive, 
   ShieldCheck, Zap, RefreshCw, Search, Key, 
   CheckCircle2, AlertTriangle, Radio, MonitorPlay, X,
-  Home, ArrowLeft, Square, Lock, Volume2, Volume1
+  Home, ArrowLeft, Square, Lock, Volume2, Volume1, Clipboard
 } from 'lucide-react';
 import { Card } from '../components/atoms/Card';
 import { Button } from '../components/atoms/Button';
@@ -21,11 +21,12 @@ const Device = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [actionSuccess, setActionSuccess] = useState(null);
   
-  // New states for Screenshot and Live Screen
+  // New states for Screenshot, Live Screen, and Clipboard Sync
   const [screenshotData, setScreenshotData] = useState(null);
   const [liveScreenActiveDevice, setLiveScreenActiveDevice] = useState(null);
   const [liveScreenFrame, setLiveScreenFrame] = useState(null);
   const [liveScreenError, setLiveScreenError] = useState(null);
+  const [clipboardToast, setClipboardToast] = useState(null);
   const gestureStartRef = useRef(null);
 
   const fetchDevices = async () => {
@@ -56,16 +57,59 @@ const Device = () => {
       setLiveScreenError(data.error);
     };
 
+    const handleClipboardChanged = (data) => {
+      if (data.text) {
+        // Auto-copy to PC clipboard if permission is granted
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(data.text).catch(() => {});
+        }
+        setClipboardToast({ text: data.text });
+        setTimeout(() => setClipboardToast(null), 4000);
+      }
+    };
+
     socketService.socket?.on('dashboard:screenshot_result', handleScreenshotResult);
     socketService.socket?.on('dashboard:screen_frame', handleScreenFrame);
     socketService.socket?.on('dashboard:screen_frame_error', handleScreenFrameError);
+    socketService.socket?.on('dashboard:clipboard_changed', handleClipboardChanged);
 
     return () => {
       socketService.socket?.off('dashboard:screenshot_result', handleScreenshotResult);
       socketService.socket?.off('dashboard:screen_frame', handleScreenFrame);
       socketService.socket?.off('dashboard:screen_frame_error', handleScreenFrameError);
+      socketService.socket?.off('dashboard:clipboard_changed', handleClipboardChanged);
     };
   }, [dispatch]);
+
+  const handleSyncPcClipboard = async (socketId) => {
+    try {
+      let text = '';
+      if (navigator.clipboard) {
+        text = await navigator.clipboard.readText();
+      }
+      if (!text) {
+        text = prompt('Enter or paste text to copy to phone:');
+      }
+      if (text && socketService.socket) {
+        socketService.socket.emit('dashboard:sync_clipboard', {
+          socketId,
+          text
+        });
+        setActionSuccess(`Synced clipboard to phone: "${text.substring(0, 20)}..."`);
+        setTimeout(() => setActionSuccess(null), 3000);
+      }
+    } catch (err) {
+      const text = prompt('Enter text to copy to phone:');
+      if (text && socketService.socket) {
+        socketService.socket.emit('dashboard:sync_clipboard', {
+          socketId,
+          text
+        });
+        setActionSuccess(`Synced clipboard to phone: "${text.substring(0, 20)}..."`);
+        setTimeout(() => setActionSuccess(null), 3000);
+      }
+    }
+  };
 
   const handlePointerDown = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -196,6 +240,30 @@ const Device = () => {
           >
             <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-green-400" />
             <span className="text-sm font-medium">{actionSuccess}</span>
+          </motion.div>
+        )}
+        {clipboardToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="p-4 bg-indigo-900/90 border border-indigo-500/50 rounded-xl shadow-2xl flex items-center justify-between space-x-3 text-white backdrop-blur-md"
+          >
+            <div className="flex items-center space-x-3 overflow-hidden">
+              <Clipboard className="w-5 h-5 flex-shrink-0 text-indigo-400 animate-bounce" />
+              <div className="truncate">
+                <span className="text-xs text-indigo-300 font-bold block">Copied from Phone Clipboard:</span>
+                <span className="text-sm font-mono text-white truncate">{clipboardToast.text}</span>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                if (navigator.clipboard) navigator.clipboard.writeText(clipboardToast.text);
+              }}
+              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
+            >
+              Copy
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -365,6 +433,14 @@ const Device = () => {
                   className="px-3 py-2 text-xs bg-white/5 hover:bg-primary/20 hover:text-primary text-slate-300 rounded-lg transition-colors text-center border border-white/5"
                 >
                   🔋 Sync Battery
+                </button>
+                <button 
+                  onClick={() => handleSyncPcClipboard(device.socketId)}
+                  className="px-3 py-2 text-xs bg-white/5 hover:bg-primary/20 hover:text-primary text-slate-300 rounded-lg transition-colors text-center border border-white/5 flex items-center justify-center space-x-1"
+                  title="Send PC clipboard to Phone"
+                >
+                  <Clipboard className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Sync Clipboard</span>
                 </button>
               </div>
             </div>

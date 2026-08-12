@@ -1,6 +1,10 @@
 package com.aimobile.managers
 
 import android.content.Context
+import android.content.ClipboardManager
+import android.content.ClipData
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.aimobile.command.CommandDispatcher
 import com.aimobile.services.ScreenCaptureManager
@@ -26,6 +30,7 @@ class ConnectionManager @Inject constructor(
 ) {
     private var socket: Socket? = null
     private val gson = Gson()
+    private var lastSyncedClipboardText: String = ""
     
     companion object {
         var instance: ConnectionManager? = null
@@ -141,6 +146,57 @@ class ConnectionManager @Inject constructor(
                     } catch (e: Exception) {
                         Log.e("ConnectionManager", "Error injecting text", e)
                     }
+                }
+            }
+
+            // Two-Way Clipboard Sync: Receive text from PC and copy to Android clipboard
+            socket?.on("device:sync_clipboard") { args ->
+                if (args.isNotEmpty()) {
+                    try {
+                        val payload = args[0] as JSONObject
+                        val text = payload.getString("text")
+                        if (text.isNotEmpty()) {
+                            lastSyncedClipboardText = text
+                            Handler(Looper.getMainLooper()).post {
+                                try {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("AgentAI_PC", text)
+                                    clipboard.setPrimaryClip(clip)
+                                    Log.d("ConnectionManager", "Synced PC clipboard to Android: $text")
+                                } catch (e: Exception) {
+                                    Log.e("ConnectionManager", "Failed to set clipboard", e)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("ConnectionManager", "Error in device:sync_clipboard", e)
+                    }
+                }
+            }
+
+            // Register Phone -> PC Clipboard Listener
+            Handler(Looper.getMainLooper()).post {
+                try {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.addPrimaryClipChangedListener {
+                        try {
+                            val clipData = clipboard.primaryClip
+                            if (clipData != null && clipData.itemCount > 0) {
+                                val text = clipData.getItemAt(0).text?.toString() ?: ""
+                                if (text.isNotEmpty() && text != lastSyncedClipboardText) {
+                                    lastSyncedClipboardText = text
+                                    val payload = JSONObject()
+                                    payload.put("text", text)
+                                    socket?.emit("device:clipboard_changed", payload)
+                                    Log.d("ConnectionManager", "Emitted phone clipboard to PC: $text")
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("ConnectionManager", "Error reading phone clipboard change", e)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("ConnectionManager", "Failed to register clipboard listener", e)
                 }
             }
 

@@ -119,6 +119,22 @@ const initSocket = (httpServer) => {
       }
     });
 
+    // Two-way Clipboard Synchronization Events
+    socket.on('dashboard:sync_clipboard', ({ socketId, text }) => {
+      if (socketId) {
+        logToFile(`[SocketManager] Syncing PC clipboard to device ${socketId}`);
+        ioInstance.to(socketId).emit('device:sync_clipboard', { text });
+      }
+    });
+
+    socket.on('device:clipboard_changed', (data) => {
+      logToFile(`[SocketManager] Device clipboard changed from ${socket.id}`);
+      ioInstance.emit('dashboard:clipboard_changed', {
+        socketId: socket.id,
+        text: data.text
+      });
+    });
+
     // Handle dashboard requesting device list on connect
     socket.on('dashboard:request_devices', () => {
       logToFile(`[SocketManager] dashboard:request_devices from ${socket.id}`);
