@@ -19,7 +19,6 @@ const Sidebar = () => (
         { name: 'AI Chat', path: '/dashboard/chat', icon: MessageSquare },
         { name: 'Voice Control', path: '/dashboard/voice', icon: Mic },
         { name: 'AI Routines', path: '/dashboard/routines', icon: Layers },
-        { name: 'Reminders', path: '/dashboard/reminders', icon: Bell },
         { name: 'History', path: '/dashboard/history', icon: History },
         { name: 'Device', path: '/dashboard/device', icon: Smartphone },
         { name: 'Settings', path: '/dashboard/settings', icon: Settings },

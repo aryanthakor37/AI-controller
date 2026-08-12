@@ -495,6 +495,27 @@ const Device = () => {
                         <Lock className="w-5 h-5" />
                       </button>
                     </div>
+
+                    {/* Dedicated Text Input Bar for reliable typing */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[85%] max-w-sm flex items-center bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-2xl px-4 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50">
+                      <input 
+                        type="text" 
+                        placeholder="Type here & press Enter to send..." 
+                        className="bg-transparent border-none outline-none text-white text-sm w-full placeholder:text-slate-400 font-medium"
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === 'Enter') {
+                            const val = e.currentTarget.value;
+                            if (!val) return;
+                            socketService.socket.emit('dashboard:inject_text', {
+                              socketId: liveScreenActiveDevice,
+                              text: val
+                            });
+                            e.currentTarget.value = '';
+                          }
+                        }}
+                      />
+                    </div>
                   </>
                 ) : (
                   <div className="text-center p-8">

@@ -78,25 +78,80 @@ class MyAccessibilityService : AccessibilityService() {
         }
     }
 
-    fun injectTextToFocusedNode(text: String) {
-        val root = rootInActiveWindow ?: return
-        val focusedNode = root.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT)
-        
-        if (focusedNode != null) {
-            val currentText = focusedNode.text?.toString() ?: ""
-            val newText = if (text == "\b" || text == "Backspace") {
-                if (currentText.isNotEmpty()) currentText.dropLast(1) else ""
-            } else if (text == "\n" || text == "Enter") {
-                currentText + "\n"
-            } else {
-                currentText + text
+    companion object {
+        var instance: MyAccessibilityService? = null
+            private set
+
+        private val _isServiceEnabled = MutableStateFlow(false)
+        val isServiceEnabled: StateFlow<Boolean> = _isServiceEnabled.asStateFlow()
+
+        private val _currentActivePackageFlow = MutableStateFlow("")
+        val currentActivePackageFlow = _currentActivePackageFlow.asStateFlow()
+
+        var currentActivePackage: String
+            get() = _currentActivePackageFlow.value
+            set(value) {
+                _currentActivePackageFlow.value = value
             }
             
+        // Buffer to prevent dropped characters during fast typing
+        private var localTextBuffer: String = ""
+        private var lastInjectTime: Long = 0
+        private var lastInjectedNodeId: String? = null
+    }
+
+    private fun findFocusedEditableNode(node: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
+        if (node == null) return null
+        if (node.isFocused && node.isEditable) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i)
+            val focusedChild = findFocusedEditableNode(child)
+            if (focusedChild != null) return focusedChild
+        }
+        return null
+    }
+
+    fun injectTextToFocusedNode(text: String) {
+        val root = rootInActiveWindow ?: return
+        var focusedNode = root.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT)
+        
+        // Fallback: Recursively search if findFocus returns null
+        if (focusedNode == null) {
+            focusedNode = findFocusedEditableNode(root)
+        }
+        
+        if (focusedNode != null) {
+            val systemText = focusedNode.text?.toString() ?: ""
+            val currentTime = System.currentTimeMillis()
+            val nodeId = focusedNode.viewIdResourceName ?: focusedNode.hashCode().toString()
+            
+            // If it's been more than 1.5 seconds since the last keystroke, or we switched text boxes,
+            // we re-sync our local buffer with the actual text on the screen.
+            if (currentTime - lastInjectTime > 1500 || lastInjectedNodeId != nodeId) {
+                localTextBuffer = systemText
+                lastInjectedNodeId = nodeId
+            }
+            
+            // Apply the new keystroke to our fast local buffer
+            if (text == "\b" || text == "Backspace") {
+                if (localTextBuffer.isNotEmpty()) {
+                    localTextBuffer = localTextBuffer.dropLast(1)
+                }
+            } else if (text == "\n" || text == "Enter") {
+                localTextBuffer += "\n"
+            } else {
+                localTextBuffer += text
+            }
+            
+            lastInjectTime = currentTime
+            
             val arguments = android.os.Bundle()
-            arguments.putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText)
+            arguments.putCharSequence(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, localTextBuffer)
             focusedNode.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+            
+            // Important: We don't recycle focusedNode here if we plan to use it again, but since this is the end:
             focusedNode.recycle()
-            Log.d("AccessibilityService", "Injected text: $newText")
+            Log.d("AccessibilityService", "Injected text: $localTextBuffer")
         } else {
             Log.d("AccessibilityService", "No input focused node found to inject text")
         }
@@ -113,22 +168,5 @@ class MyAccessibilityService : AccessibilityService() {
         Log.d("AccessibilityService", "Service Destroyed")
         _isServiceEnabled.value = false
         instance = null
-    }
-
-    companion object {
-        var instance: MyAccessibilityService? = null
-            private set
-
-        private val _isServiceEnabled = MutableStateFlow(false)
-        val isServiceEnabled: StateFlow<Boolean> = _isServiceEnabled.asStateFlow()
-
-        private val _currentActivePackageFlow = MutableStateFlow("")
-        val currentActivePackageFlow = _currentActivePackageFlow.asStateFlow()
-
-        var currentActivePackage: String
-            get() = _currentActivePackageFlow.value
-            set(value) {
-                _currentActivePackageFlow.value = value
-            }
     }
 }

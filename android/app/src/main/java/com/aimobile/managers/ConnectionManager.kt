@@ -96,11 +96,6 @@ class ConnectionManager @Inject constructor(
             socket?.on("command:execute") { args ->
                 if (args.isNotEmpty()) {
                     val rawJson = args[0].toString()
-                    
-                    // Show a visual toast so we know it arrived!
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
-                        android.widget.Toast.makeText(context, "Command Received: $rawJson", android.widget.Toast.LENGTH_LONG).show()
-                    }
 
                     commandDispatcher.dispatchCommand(rawJson) { result ->
                         // Send result back to server

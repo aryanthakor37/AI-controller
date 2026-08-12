@@ -52,11 +52,14 @@ class ScreenCaptureManager @Inject constructor(
         }, null)
     }
 
+    private var lastFrameTime: Long = 0L
+
     @SuppressLint("WrongConstant")
     fun startStream(serviceContext: Context) {
         if (isStreaming) return
         isStreaming = true
         firstFrameReceived = false
+        lastFrameTime = 0L
 
         try {
             val metrics = serviceContext.resources.displayMetrics
@@ -77,12 +80,22 @@ class ScreenCaptureManager @Inject constructor(
         
         imageReader?.setOnImageAvailableListener({ reader ->
             if (!isStreaming) return@setOnImageAvailableListener
-            if (!firstFrameReceived) {
-                firstFrameReceived = true
-                onError?.invoke("DEBUG: First frame received from ImageReader!")
-            }
             try {
                 val image = reader.acquireLatestImage() ?: return@setOnImageAvailableListener
+                
+                // Throttle framerate to ~15 FPS (66ms) to prevent lag/latency buildup
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastFrameTime < 66L) {
+                    image.close()
+                    return@setOnImageAvailableListener
+                }
+                lastFrameTime = currentTime
+
+                if (!firstFrameReceived) {
+                    firstFrameReceived = true
+                    onError?.invoke("DEBUG: First frame received from ImageReader!")
+                }
+
                 try {
                     val planes = image.planes
                     val buffer = planes[0].buffer
