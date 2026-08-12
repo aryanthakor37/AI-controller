@@ -25,6 +25,11 @@ class MyAccessibilityService : AccessibilityService() {
                 Log.d("AccessibilityService", "Window State Changed: $currentActivePackage")
             }
 
+            if (it.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
+                it.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+                autoAcceptScreenCapturePrompt()
+            }
+
             // Macro recording event listener
             macroRecorderManager?.let { recorder ->
                 if (recorder.isRecording.value) {
@@ -43,6 +48,24 @@ class MyAccessibilityService : AccessibilityService() {
                                 recorder.recordTextInput(pkg, typedText)
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun autoAcceptScreenCapturePrompt() {
+        val root = rootInActiveWindow ?: return
+        val promptKeywords = listOf("Start now", "Start recording", "Start casting", "Start", "Allow", "ચાલુ કરો", "શરૂ કરો", "शुरू करें")
+        for (keyword in promptKeywords) {
+            val nodes = root.findAccessibilityNodeInfosByText(keyword)
+            if (!nodes.isNullOrEmpty()) {
+                for (node in nodes) {
+                    val text = (node.text?.toString() ?: node.contentDescription?.toString() ?: "").trim().lowercase()
+                    if (text == keyword.lowercase() || text == "start now" || text == "start recording" || text == "start") {
+                        com.aimobile.accessibility.automation.AutomationManager.performClick(node)
+                        Log.d("AccessibilityService", "Auto-clicked screen capture prompt button: $keyword")
+                        return
                     }
                 }
             }

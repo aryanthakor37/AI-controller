@@ -453,11 +453,13 @@ class IntentRouter(private val context: Context) {
                                                 }
                                                 hwBuffer.close()
                                             } catch (e: Throwable) {
-                                                continuation.resumeWith(Result.success(CommandResult("Failed", "Error converting screenshot: ${e.message}")))
+                                                val success = service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
+                                                continuation.resumeWith(Result.success(CommandResult(if (success) "Success" else "Failed", "Screenshot taken via global action fallback")))
                                             }
                                         }
                                         override fun onFailure(errorCode: Int) {
-                                            continuation.resumeWith(Result.success(CommandResult("Failed", "Screenshot failed code: $errorCode")))
+                                            val success = service.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT)
+                                            continuation.resumeWith(Result.success(CommandResult(if (success) "Success" else "Failed", "Screenshot taken via global action fallback")))
                                         }
                                     }
                                 )

@@ -68,16 +68,16 @@ const Device = () => {
       }
     };
 
-    socketService.socket?.on('dashboard:screenshot_result', handleScreenshotResult);
-    socketService.socket?.on('dashboard:screen_frame', handleScreenFrame);
-    socketService.socket?.on('dashboard:screen_frame_error', handleScreenFrameError);
-    socketService.socket?.on('dashboard:clipboard_changed', handleClipboardChanged);
+    socketService.on('dashboard:screenshot_result', handleScreenshotResult);
+    socketService.on('dashboard:screen_frame', handleScreenFrame);
+    socketService.on('dashboard:screen_frame_error', handleScreenFrameError);
+    socketService.on('dashboard:clipboard_changed', handleClipboardChanged);
 
     return () => {
-      socketService.socket?.off('dashboard:screenshot_result', handleScreenshotResult);
-      socketService.socket?.off('dashboard:screen_frame', handleScreenFrame);
-      socketService.socket?.off('dashboard:screen_frame_error', handleScreenFrameError);
-      socketService.socket?.off('dashboard:clipboard_changed', handleClipboardChanged);
+      socketService.off('dashboard:screenshot_result', handleScreenshotResult);
+      socketService.off('dashboard:screen_frame', handleScreenFrame);
+      socketService.off('dashboard:screen_frame_error', handleScreenFrameError);
+      socketService.off('dashboard:clipboard_changed', handleClipboardChanged);
     };
   }, [dispatch]);
 
@@ -90,8 +90,8 @@ const Device = () => {
       if (!text) {
         text = prompt('Enter or paste text to copy to phone:');
       }
-      if (text && socketService.socket) {
-        socketService.socket.emit('dashboard:sync_clipboard', {
+      if (text) {
+        socketService.emit('dashboard:sync_clipboard', {
           socketId,
           text
         });
@@ -100,8 +100,8 @@ const Device = () => {
       }
     } catch (err) {
       const text = prompt('Enter text to copy to phone:');
-      if (text && socketService.socket) {
-        socketService.socket.emit('dashboard:sync_clipboard', {
+      if (text) {
+        socketService.emit('dashboard:sync_clipboard', {
           socketId,
           text
         });
@@ -127,8 +127,8 @@ const Device = () => {
     const { x: startX, y: startY, time: startTime } = gestureStartRef.current;
     const durationMs = Date.now() - startTime;
 
-    if (liveScreenActiveDevice && socketService.socket) {
-      socketService.socket.emit('dashboard:perform_gesture', {
+    if (liveScreenActiveDevice) {
+      socketService.emit('dashboard:perform_gesture', {
         socketId: liveScreenActiveDevice,
         gesture: { startX, startY, endX, endY, durationMs }
       });
@@ -166,7 +166,7 @@ const Device = () => {
   // Ghost Typing: Global Keyboard Listener for Live Stream
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      if (!liveScreenActiveDevice || !socketService.socket) return;
+      if (!liveScreenActiveDevice) return;
       
       // Ignore if typing in an input field on the dashboard itself
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -182,7 +182,7 @@ const Device = () => {
       else if (e.key === 'Backspace') charToInject = 'Backspace';
       else if (e.key.length > 1) return; // Ignore Shift, Ctrl, etc.
       
-      socketService.socket.emit('dashboard:inject_text', {
+      socketService.emit('dashboard:inject_text', {
         socketId: liveScreenActiveDevice,
         text: charToInject
       });
@@ -583,7 +583,7 @@ const Device = () => {
                           if (e.key === 'Enter') {
                             const val = e.currentTarget.value;
                             if (!val) return;
-                            socketService.socket.emit('dashboard:inject_text', {
+                            socketService.emit('dashboard:inject_text', {
                               socketId: liveScreenActiveDevice,
                               text: val
                             });

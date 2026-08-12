@@ -5,8 +5,33 @@ import { getSocketUrl } from '../config';
 
 class SocketService {
   constructor() {
-    this.socket = null;
-    this.url = getSocketUrl();
+    this.listeners = new Map();
+  }
+
+  on(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event).add(callback);
+
+    if (this.socket) {
+      this.socket.on(event, callback);
+    }
+  }
+
+  off(event, callback) {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event).delete(callback);
+    }
+    if (this.socket) {
+      this.socket.off(event, callback);
+    }
+  }
+
+  emit(event, payload) {
+    if (this.socket) {
+      this.socket.emit(event, payload);
+    }
   }
 
   connect() {
@@ -26,6 +51,13 @@ class SocketService {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: autoReconnect ? Infinity : 0
+    });
+
+    // Re-attach registered listeners
+    this.listeners.forEach((callbacks, event) => {
+      callbacks.forEach((cb) => {
+        this.socket.on(event, cb);
+      });
     });
 
     this.socket.on('connect', () => {
