@@ -82,6 +82,10 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:excludeFromRecents="true" />
 
+        <activity android:name=".services.ClipboardSyncActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true" />
+
         <service
             android:name=".services.ScreenCaptureService"
             android:foregroundServiceType="mediaProjection"

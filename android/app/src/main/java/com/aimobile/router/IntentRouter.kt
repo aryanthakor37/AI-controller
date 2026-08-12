@@ -486,28 +486,10 @@ class IntentRouter(private val context: Context) {
                 }
                 
                 "GET_CLIPBOARD" -> {
-                    val service = com.aimobile.accessibility.MyAccessibilityService.instance
-                    var text = service?.getPhoneClipboardText() ?: ""
-                    if (text.isEmpty()) {
-                        text = com.aimobile.accessibility.MyAccessibilityService.lastCopiedText
-                    }
-                    if (text.isEmpty()) {
-                        try {
-                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-                            val clipData = clipboard?.primaryClip
-                            if (clipData != null && clipData.itemCount > 0) {
-                                text = clipData.getItemAt(0).text?.toString() ?: ""
-                            }
-                        } catch (e: Exception) {
-                            android.util.Log.e("IntentRouter", "Clipboard read error", e)
-                        }
-                    }
-                    if (text.isNotEmpty()) {
-                        com.aimobile.managers.ConnectionManager.instance?.onPhoneClipboardChanged(text)
-                        CommandResult("Success", "Fetched Phone Clipboard: \"${text.take(30)}...\"", text)
-                    } else {
-                        CommandResult("Failed", "Copy text on phone first or select text on screen")
-                    }
+                    val syncIntent = android.content.Intent(context, com.aimobile.services.ClipboardSyncActivity::class.java)
+                    syncIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(syncIntent)
+                    CommandResult("Success", "Syncing Phone Clipboard to PC...")
                 }
                 
                 "GO_HOME" -> {
