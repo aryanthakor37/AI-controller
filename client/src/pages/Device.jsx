@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Smartphone, Battery, Wifi, Cpu, HardDrive, 
-  ShieldCheck, Zap, RefreshCw, Search, Key, 
+import {
+  Smartphone, Battery, Wifi, Cpu, HardDrive,
+  ShieldCheck, Zap, RefreshCw, Search, Key,
   CheckCircle2, AlertTriangle, Radio, MonitorPlay, X,
   Home, ArrowLeft, Square, Lock, Volume2, Volume1, Clipboard
 } from 'lucide-react';
@@ -20,7 +20,7 @@ const Device = () => {
   const [pairingCode, setPairingCode] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [actionSuccess, setActionSuccess] = useState(null);
-  
+
   // New states for Screenshot, Live Screen, and Clipboard Sync
   const [screenshotData, setScreenshotData] = useState(null);
   const [liveScreenActiveDevice, setLiveScreenActiveDevice] = useState(null);
@@ -61,7 +61,7 @@ const Device = () => {
       if (data.text) {
         // Auto-copy to PC clipboard if permission is granted
         if (navigator.clipboard) {
-          navigator.clipboard.writeText(data.text).catch(() => {});
+          navigator.clipboard.writeText(data.text).catch(() => { });
         }
         setClipboardToast({ text: data.text });
         setActionSuccess(`Copied from Phone Clipboard: "${data.text.substring(0, 25)}..."`);
@@ -130,7 +130,7 @@ const Device = () => {
 
   const handlePointerUp = (e) => {
     if (!gestureStartRef.current) return;
-    
+
     const rect = e.currentTarget.getBoundingClientRect();
     const endX = (e.clientX - rect.left) / rect.width;
     const endY = (e.clientY - rect.top) / rect.height;
@@ -143,7 +143,7 @@ const Device = () => {
         gesture: { startX, startY, endX, endY, durationMs }
       });
     }
-    
+
     gestureStartRef.current = null;
   };
 
@@ -177,7 +177,7 @@ const Device = () => {
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
       if (!liveScreenActiveDevice) return;
-      
+
       // Ignore if typing in an input field on the dashboard itself
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
@@ -191,7 +191,7 @@ const Device = () => {
       if (e.key === 'Enter') charToInject = 'Enter';
       else if (e.key === 'Backspace') charToInject = 'Backspace';
       else if (e.key.length > 1) return; // Ignore Shift, Ctrl, etc.
-      
+
       socketService.emit('dashboard:inject_text', {
         socketId: liveScreenActiveDevice,
         text: charToInject
@@ -202,7 +202,7 @@ const Device = () => {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [liveScreenActiveDevice]);
 
-  const filteredDevices = activeDevices.filter(device => 
+  const filteredDevices = activeDevices.filter(device =>
     (device.deviceName || 'Android Device').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (device.socketId || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -220,7 +220,7 @@ const Device = () => {
           </p>
         </div>
         <div className="flex items-center space-x-3 w-full sm:w-auto">
-          <Button 
+          <Button
             onClick={fetchDevices}
             variant="ghost"
             className="border border-white/10 hover:bg-white/5 text-slate-300"
@@ -228,7 +228,7 @@ const Device = () => {
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
-          <Button 
+          <Button
             onClick={handleGeneratePairingCode}
             disabled={isGenerating}
             className="bg-primary hover:bg-blue-600 text-white shadow-lg shadow-primary/20"
@@ -253,7 +253,7 @@ const Device = () => {
           </motion.div>
         )}
         {clipboardToast && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -266,7 +266,7 @@ const Device = () => {
                 <span className="text-sm font-mono text-white truncate">{clipboardToast.text}</span>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => {
                 if (navigator.clipboard) navigator.clipboard.writeText(clipboardToast.text);
               }}
@@ -280,7 +280,7 @@ const Device = () => {
 
       {/* Pairing Code Modal Popup */}
       {pairingCode && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="p-6 bg-surface/90 border border-primary/40 rounded-2xl shadow-2xl space-y-4"
@@ -290,7 +290,7 @@ const Device = () => {
               <Key className="w-5 h-5 mr-2 text-primary" />
               Device Pairing Code
             </h3>
-            <button 
+            <button
               onClick={() => setPairingCode(null)}
               className="text-slate-400 hover:text-white text-sm"
             >
@@ -338,8 +338,8 @@ const Device = () => {
           <div>
             <p className="text-xs text-slate-400">Avg Command Delay</p>
             <p className="text-2xl font-bold text-white">
-              {activeDevices.length > 0 && activeDevices[0].latency 
-                ? `${activeDevices[0].latency} ms` 
+              {activeDevices.length > 0 && activeDevices[0].latency
+                ? `${activeDevices[0].latency} ms`
                 : '12 ms'}
             </p>
           </div>
@@ -349,8 +349,8 @@ const Device = () => {
       {/* Device Filter & Search Bar */}
       <div className="relative">
         <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <Input 
-          placeholder="Filter paired devices by name or socket ID..." 
+        <Input
+          placeholder="Filter paired devices by name or socket ID..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10 bg-surface/50 border-white/10"
@@ -360,7 +360,7 @@ const Device = () => {
       {/* Device Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredDevices.map((device) => (
-          <Card 
+          <Card
             key={device.socketId}
             className="flex flex-col space-y-4 border border-white/10 hover:border-primary/50 transition-all duration-200"
           >
@@ -384,12 +384,12 @@ const Device = () => {
               <div>
                 <div className="flex justify-between text-xs text-slate-400 mb-1">
                   <span className="flex items-center"><Battery className="w-3.5 h-3.5 mr-1 text-green-400" /> Battery Level</span>
-                  <span className="font-bold text-white">{(device.batteryPercentage ?? device.battery ?? 100)}%</span>
+                  <span className="font-bold text-white">{device.batteryPercentage || 85}%</span>
                 </div>
                 <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" 
-                    style={{ width: `${(device.batteryPercentage ?? device.battery ?? 100)}%` }}
+                  <div
+                    className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full"
+                    style={{ width: `${device.batteryPercentage || 85}%` }}
                   />
                 </div>
               </div>
@@ -409,21 +409,21 @@ const Device = () => {
             <div className="pt-4 border-t border-white/5 space-y-2">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Quick Commands</p>
               <div className="grid grid-cols-2 gap-2">
-                <button 
+                <button
                   onClick={() => triggerDeviceCommand(device.socketId, 'OPEN_CAMERA', device.deviceName)}
                   className="px-3 py-2 text-xs bg-white/5 hover:bg-primary/20 hover:text-primary text-slate-300 rounded-lg transition-colors text-center border border-white/5"
                 >
                   📷 Camera
                 </button>
-                <Button 
-                  variant="primary" 
+                <Button
+                  variant="primary"
                   className="w-full justify-center bg-slate-800 hover:bg-slate-700 text-sm py-2"
                   onClick={() => triggerDeviceCommand(device.socketId, 'TAKE_SCREENSHOT', device.deviceName)}
                 >
                   📸 Screenshot
                 </Button>
-                <Button 
-                  variant="primary" 
+                <Button
+                  variant="primary"
                   className="w-full justify-center bg-slate-800 hover:bg-indigo-600 text-sm py-2"
                   onClick={() => {
                     setLiveScreenActiveDevice(device.socketId);
@@ -432,19 +432,19 @@ const Device = () => {
                 >
                   <MonitorPlay className="w-4 h-4 mr-2" /> Live Screen
                 </Button>
-                <button 
+                <button
                   onClick={() => triggerDeviceCommand(device.socketId, 'TOGGLE_WIFI', device.deviceName)}
                   className="px-3 py-2 text-xs bg-white/5 hover:bg-primary/20 hover:text-primary text-slate-300 rounded-lg transition-colors text-center border border-white/5"
                 >
                   📶 Toggle Wi-Fi
                 </button>
-                <button 
+                <button
                   onClick={() => triggerDeviceCommand(device.socketId, 'GET_BATTERY_STATUS', device.deviceName)}
                   className="px-3 py-2 text-xs bg-white/5 hover:bg-primary/20 hover:text-primary text-slate-300 rounded-lg transition-colors text-center border border-white/5"
                 >
                   🔋 Sync Battery
                 </button>
-                <button 
+                <button
                   onClick={() => handleSyncPcClipboard(device.socketId)}
                   className="px-3 py-2 text-xs bg-white/5 hover:bg-indigo-500/20 hover:text-indigo-400 text-slate-300 rounded-lg transition-colors text-center border border-white/5 flex items-center justify-center space-x-1"
                   title="Send PC clipboard to Phone"
@@ -452,7 +452,7 @@ const Device = () => {
                   <Clipboard className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Send Clipboard</span>
                 </button>
-                <button 
+                <button
                   onClick={() => triggerDeviceCommand(device.socketId, 'GET_CLIPBOARD', device.deviceName)}
                   className="px-3 py-2 text-xs bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-400 text-slate-300 rounded-lg transition-colors text-center border border-white/5 flex items-center justify-center space-x-1"
                   title="Get copied text from Phone to PC"
@@ -473,7 +473,7 @@ const Device = () => {
               <p className="text-sm text-slate-400 max-w-md">
                 Pair your Android smartphone using the pair code generator above to remotely execute voice and text commands.
               </p>
-              <Button 
+              <Button
                 onClick={handleGeneratePairingCode}
                 className="mt-2 bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30"
               >
@@ -487,13 +487,13 @@ const Device = () => {
       {/* Screenshot Modal */}
       <AnimatePresence>
         {screenshotData && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -509,8 +509,8 @@ const Device = () => {
                 <img src={`data:image/jpeg;base64,${screenshotData}`} alt="Screenshot" className="max-h-[70vh] rounded-lg shadow-2xl" />
               </div>
               <div className="p-4 border-t border-slate-800 flex justify-end">
-                <a 
-                  href={`data:image/jpeg;base64,${screenshotData}`} 
+                <a
+                  href={`data:image/jpeg;base64,${screenshotData}`}
                   download={`screenshot_${new Date().getTime()}.jpg`}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
                 >
@@ -525,13 +525,13 @@ const Device = () => {
       {/* Live Screen Modal */}
       <AnimatePresence>
         {liveScreenActiveDevice && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
@@ -542,12 +542,12 @@ const Device = () => {
                   <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse mr-2"></div>
                   <h3 className="text-sm font-bold text-white tracking-wider">LIVE STREAM</h3>
                 </div>
-                <button 
+                <button
                   onClick={() => {
                     triggerDeviceCommand(liveScreenActiveDevice, 'STOP_SCREEN_STREAM', 'Device');
                     setLiveScreenActiveDevice(null);
                     setLiveScreenFrame(null);
-                  }} 
+                  }}
                   className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-1 rounded-full transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -556,16 +556,16 @@ const Device = () => {
               <div className="bg-black flex justify-center items-center min-h-[60vh] relative">
                 {liveScreenFrame ? (
                   <>
-                    <img 
-                      src={`data:image/jpeg;base64,${liveScreenFrame}`} 
-                      alt="Live Screen" 
-                      className="w-full h-full object-contain cursor-crosshair touch-none" 
+                    <img
+                      src={`data:image/jpeg;base64,${liveScreenFrame}`}
+                      alt="Live Screen"
+                      className="w-full h-full object-contain cursor-crosshair touch-none"
                       onPointerDown={handlePointerDown}
                       onPointerUp={handlePointerUp}
                       onPointerLeave={() => { gestureStartRef.current = null; }}
                       draggable="false"
                     />
-                    
+
                     {/* Hardware Buttons Panel (Phantom Touch) */}
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 p-2 bg-slate-900/70 backdrop-blur-md rounded-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
                       <button onClick={() => triggerDeviceCommand(liveScreenActiveDevice, 'GO_HOME', 'Device')} className="p-2.5 text-slate-300 hover:text-white hover:bg-white/20 rounded-xl transition-colors" title="Home">
@@ -592,9 +592,9 @@ const Device = () => {
 
                     {/* Dedicated Text Input Bar for reliable typing */}
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[85%] max-w-sm flex items-center bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-2xl px-4 py-3 shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50">
-                      <input 
-                        type="text" 
-                        placeholder="Type here & press Enter to send..." 
+                      <input
+                        type="text"
+                        placeholder="Type here & press Enter to send..."
                         className="bg-transparent border-none outline-none text-white text-sm w-full placeholder:text-slate-400 font-medium"
                         onKeyDown={(e) => {
                           e.stopPropagation();

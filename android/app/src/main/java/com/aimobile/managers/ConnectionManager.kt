@@ -93,9 +93,8 @@ class ConnectionManager @Inject constructor(
                     
                     val response = JSONObject()
                     response.put("timestamp", timestamp)
-                    response.put("batteryPercentage", deviceInfoManager.getBatteryPercentage())
                     socket?.emit("device:heartbeat", response)
-                    Log.d("ConnectionManager", "Heartbeat acknowledged with battery")
+                    Log.d("ConnectionManager", "Heartbeat acknowledged")
                 }
             }
 

@@ -48,7 +48,7 @@ const initSocket = (httpServer) => {
       logToFile(`[SocketManager] device:register from ${socket.id} - ${JSON.stringify(deviceData)}`);
       connectionManager.registerDevice(socket.id, deviceData);
       socket.emit('device:connected', { status: 'success', message: 'Device registered successfully' });
-      
+
       // Notify Dashboard about the updated device list
       ioInstance.emit('dashboard:devices_update', connectionManager.getAllDevices());
     });
@@ -56,12 +56,15 @@ const initSocket = (httpServer) => {
     // Heartbeat logic
     socket.on('device:heartbeat', (data) => {
       const latency = Date.now() - data.timestamp;
-      const battery = typeof data.batteryPercentage === 'number' ? data.batteryPercentage : data.battery;
-      connectionManager.updateHeartbeat(socket.id, latency, battery);
-      logToFile(`[SocketManager] heartbeat from ${socket.id}, latency: ${latency}, battery: ${battery}`);
-      
-      // Notify Dashboard about the updated device telemetry list
-      ioInstance.emit('dashboard:devices_update', connectionManager.getAllDevices());
+      connectionManager.updateHeartbeat(socket.id, latency);
+      logToFile(`[SocketManager] heartbeat from ${socket.id}, latency: ${latency}`);
+
+      // Send real-time telemetry to Dashboard
+      ioInstance.emit('dashboard:device_telemetry', {
+        socketId: socket.id,
+        latency,
+        lastSeen: Date.now()
+      });
     });
 
     // Handle commands from Dashboard
@@ -141,20 +144,6 @@ const initSocket = (httpServer) => {
     // Handle command results coming back from the Android device
     socket.on('command:result', (result) => {
       logToFile(`[SocketManager] command:result from ${socket.id}: ${JSON.stringify(result)}`);
-      
-      // If battery status was fetched, parse percentage and update device telemetry
-      if (result && result.message) {
-        const match = result.message.match(/Battery Level:\s*(\d+)%/i);
-        if (match && match[1]) {
-          const batteryVal = parseInt(match[1], 10);
-          const dev = connectionManager.getDevice(socket.id);
-          if (dev) {
-            connectionManager.updateHeartbeat(socket.id, dev.latency || 0, batteryVal);
-            ioInstance.emit('dashboard:devices_update', connectionManager.getAllDevices());
-          }
-        }
-      }
-
       // Broadcast this result to the dashboard so the user sees what the phone actually did
       ioInstance.emit('dashboard:command_result', { deviceId: socket.id, result });
     });

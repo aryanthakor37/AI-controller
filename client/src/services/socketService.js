@@ -94,6 +94,14 @@ class SocketService {
           content: `📱 **Phone Response**\n${statusIcon} ${result.status} - ${result.message}`
         }));
       });
+
+      // Also update conversationSlice for Voice page history
+      import('../redux/slices/conversationSlice').then(({ addMessage: addConvMessage }) => {
+        store.dispatch(addConvMessage({
+          role: 'ai',
+          text: `📱 **Phone Response**\n${statusIcon} ${result.status} - ${result.message}`
+        }));
+      });
     });
   }
 

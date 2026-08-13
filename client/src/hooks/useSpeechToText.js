@@ -3,14 +3,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setVoiceStatus, setVoiceError } from '../redux/slices/voiceSlice';
 import { setInterimTranscript, setFinalTranscript } from '../redux/slices/speechSlice';
 import { addMessage } from '../redux/slices/conversationSlice';
+import { fetchHistory } from '../redux/slices/commandSlice';
 import api from '../services/api';
 import useTextToSpeech from './useTextToSpeech';
+import socketService from '../services/socketService';
 
 const useSpeechToText = () => {
   const dispatch = useDispatch();
   const recognitionRef = useRef(null);
   const { status } = useSelector((state) => state.voice);
   const { language } = useSelector((state) => state.settings);
+  const { activeDevices } = useSelector((state) => state.device);
   const { speak } = useTextToSpeech();
 
   useEffect(() => {
@@ -74,11 +77,11 @@ const useSpeechToText = () => {
     };
   }, [dispatch, language]);
 
-  // Use a ref to check latest status in onend without adding status to dep array
+  // Use a ref to check latest status and activeDevices in callbacks
   const storeRef = useRef(null);
   useEffect(() => {
-    storeRef.current = { voice: { status } };
-  }, [status]);
+    storeRef.current = { voice: { status }, device: { activeDevices } };
+  }, [status, activeDevices]);
 
   const processVoiceCommand = async (transcript) => {
     if (!transcript.trim()) return;
@@ -90,9 +93,18 @@ const useSpeechToText = () => {
       // Send transcript to Backend AI Engine (Phase 4 Gemini integration)
       const response = await api.post('/voice/respond', { transcript });
       
-      const { spokenResponse, intent } = response.data.data;
+      const intentData = response.data?.data || {};
+      const { spokenResponse, intent } = intentData;
       
       dispatch(addMessage({ role: 'ai', text: spokenResponse, intent }));
+
+      // Forward intent command via WebSocket to active device
+      if (intent && intent !== 'UNKNOWN_COMMAND' && intent !== 'GENERAL_CHAT') {
+        const activeDevs = storeRef.current?.device?.activeDevices || activeDevices;
+        const targetDeviceId = (activeDevs && activeDevs.length > 0) ? activeDevs[0].socketId : 'all';
+        socketService.sendCommand(targetDeviceId, intentData);
+        dispatch(fetchHistory());
+      }
       
       // Speak the response via TTS
       speak(spokenResponse);
