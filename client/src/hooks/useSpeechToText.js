@@ -101,8 +101,8 @@ const useSpeechToText = () => {
       // Forward intent command via WebSocket to active device
       if (intent && intent !== 'UNKNOWN_COMMAND' && intent !== 'GENERAL_CHAT') {
         const activeDevs = storeRef.current?.device?.activeDevices || activeDevices;
-        const targetDeviceId = (activeDevs && activeDevs.length > 0) ? activeDevs[0].socketId : 'all';
-        socketService.sendCommand(targetDeviceId, intentData);
+        const targetDeviceId = (activeDevs && Array.isArray(activeDevs) && activeDevs.length > 0) ? activeDevs[0].socketId : 'all';
+        socketService.sendCommand(targetDeviceId || 'all', intentData);
         dispatch(fetchHistory());
       }
       

@@ -106,11 +106,15 @@ class SocketService {
   }
 
   sendCommand(deviceId, commandPayload) {
+    if (!this.socket || !this.socket.connected) {
+      console.log('[SocketService Debug] Socket not connected. Auto-connecting before sendCommand...');
+      this.connect();
+    }
     if (this.socket) {
       const state = store.getState();
       const settings = state.settings || {};
       if (settings.debugLogging) console.log('[SocketService Debug] Transmitting Command Payload:', { deviceId, commandPayload });
-      this.socket.emit('dashboard:send_command', { deviceId, command: commandPayload });
+      this.socket.emit('dashboard:send_command', { deviceId: deviceId || 'all', command: commandPayload });
     }
   }
 

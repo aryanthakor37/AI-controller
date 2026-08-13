@@ -94,14 +94,19 @@ const initSocket = (httpServer) => {
     // Handle commands from Dashboard
     socket.on('dashboard:send_command', ({ deviceId, command }) => {
       logToFile(`[SocketManager] Sending command to ${deviceId}: ${JSON.stringify(command)}`);
-      if (deviceId === 'all') {
+      if (deviceId === 'all' || !deviceId) {
         const devices = connectionManager.getAllDevices();
-        devices.forEach(device => {
-          ioInstance.to(device.socketId).emit('command:execute', command);
-        });
+        if (devices && devices.length > 0) {
+          devices.forEach(device => {
+            ioInstance.to(device.socketId).emit('command:execute', command);
+          });
+        }
+        // Broadcast fallback to ensure any connected Android device gets executed
+        ioInstance.emit('command:execute', command);
       } else {
-        // Forward command to the specific device's socket
+        // Forward command to the specific device's socket and broadcast fallback
         ioInstance.to(deviceId).emit('command:execute', command);
+        ioInstance.emit('command:execute', command);
       }
     });
 
